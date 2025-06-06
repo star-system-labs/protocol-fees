@@ -14,10 +14,10 @@ import {MockUniswapV3Pool} from "test/mocks/MockUniswapV3Pool.sol";
 import {MockUniswapV3Factory} from "test/mocks/MockUniswapV3Factory.sol";
 
 contract V3FeeManagerTest is Test {
-  V3FeeManagerHarness factoryOwner;
+  V3FeeManagerHarness feeManager;
   address admin = makeAddr("Admin");
   MockERC20 payoutToken;
-  address rewardReceiver;
+  address payoutReceiver;
   MockUniswapV3Pool pool;
   MockUniswapV3Pool pool2;
   MockUniswapV3Pool pool3;
@@ -29,11 +29,10 @@ contract V3FeeManagerTest is Test {
     payoutToken = new MockERC20();
     vm.label(address(payoutToken), "Payout Token");
 
-    rewardReceiver = makeAddr("Reward Receiver");
+    payoutReceiver = makeAddr("Payout Receiver");
 
     pool = new MockUniswapV3Pool();
     vm.label(address(pool), "Pool 1");
-
     pool2 = new MockUniswapV3Pool();
     vm.label(address(pool2), "Pool 2");
     pool3 = new MockUniswapV3Pool();
@@ -43,14 +42,12 @@ contract V3FeeManagerTest is Test {
     vm.label(address(factory), "Factory");
   }
 
-  function _getValidGlobalFee(uint256 _seed) internal pure returns (uint8 _fee) {
-    _fee = uint8(bound(_seed, 0, 10));
-    if (_fee == 0) return _fee;
-    if (_fee < 4) _fee += 3;
+  function _deployFeeManagerWithRandomNonZeroPayoutAmount() public {
+    uint256 _payoutAmount = vm.randomUint();
+    console2.log("payoutAmount", _payoutAmount);
+    _deployFeeManagerWithPayoutAmount(_payoutAmount);
   }
 
-  // In order to fuzz over the payout amount, we require each test to call this method to deploy
-  // the factory owner before doing anything else.
   function _deployFeeManagerWithPayoutAmount(uint256 _payoutAmount) public {
     vm.assume(_payoutAmount != 0);
     uint8 _globalProtocolFeeDenominator = 10;
@@ -59,11 +56,49 @@ contract V3FeeManagerTest is Test {
 
   function _deployFeeManagerWithPayoutAndFeeAmount(uint256 _payoutAmount, uint256 _feeSeed) public {
     vm.assume(_payoutAmount != 0);
-    uint8 _fee = _getValidGlobalFee(_feeSeed);
+    uint8 _fee = _getValidProtocolFee(_feeSeed);
 
-    factoryOwner =
-      new V3FeeManagerHarness(admin, factory, payoutToken, _payoutAmount, _fee, rewardReceiver);
-    vm.label(address(factoryOwner), "Factory Owner");
+    feeManager =
+      new V3FeeManagerHarness(admin, factory, payoutToken, _payoutAmount, _fee, payoutReceiver);
+    vm.label(address(feeManager), "Factory Owner");
+  }
+
+  function _createPools(uint256 _numPools)
+    internal
+    returns (IUniswapV3PoolOwnerActions[] memory _pools)
+  {
+    _pools = new IUniswapV3PoolOwnerActions[](_numPools);
+    for (uint256 i = 0; i < _numPools; i++) {
+      _pools[i] = IUniswapV3PoolOwnerActions(address(new MockUniswapV3Pool()));
+      vm.label(address(_pools[i]), string.concat("Created pool ", string(abi.encodePacked(i))));
+    }
+    return _pools;
+  }
+
+  function _getValidProtocolFee() internal returns (uint8 _fee) {
+    _fee = _getValidProtocolFee(uint8(vm.randomUint(0, 10)));
+  }
+
+  function _getValidProtocolFee(uint256 _seed) internal pure returns (uint8 _fee) {
+    _fee = uint8(bound(_seed, 0, 10));
+    if (_fee == 0) return _fee;
+    if (_fee < 4) _fee += 3;
+  }
+
+  function _generateValidFeeProtocolOverrides(IUniswapV3PoolOwnerActions[] memory _pools)
+    internal
+    returns (V3FeeManager.FeeProtocolOverride[] memory)
+  {
+    V3FeeManager.FeeProtocolOverride[] memory _override =
+      new V3FeeManager.FeeProtocolOverride[](_pools.length);
+    for (uint256 i = 0; i < _override.length; i++) {
+      _override[i] = V3FeeManager.FeeProtocolOverride({
+        pool: _pools[i],
+        feeProtocol0: _getValidProtocolFee(),
+        feeProtocol1: _getValidProtocolFee()
+      });
+    }
+    return _override;
   }
 }
 
@@ -71,11 +106,11 @@ contract Constructor is V3FeeManagerTest {
   function testFuzz_SetsTheAdminPayoutTokenAndPayoutAmount(uint256 _payoutAmount) public {
     _deployFeeManagerWithPayoutAmount(_payoutAmount);
 
-    assertEq(factoryOwner.admin(), admin);
-    assertEq(address(factoryOwner.FACTORY()), address(factory));
-    assertEq(address(factoryOwner.PAYOUT_TOKEN()), address(payoutToken));
-    assertEq(factoryOwner.payoutAmount(), _payoutAmount);
-    assertEq(address(factoryOwner.REWARD_RECEIVER()), rewardReceiver);
+    assertEq(feeManager.admin(), admin);
+    assertEq(address(feeManager.FACTORY()), address(factory));
+    assertEq(address(feeManager.PAYOUT_TOKEN()), address(payoutToken));
+    assertEq(feeManager.payoutAmount(), _payoutAmount);
+    assertEq(address(feeManager.PAYOUT_RECEIVER()), payoutReceiver);
   }
 
   function testFuzz_SetsAllParametersToArbitraryValues(
@@ -84,24 +119,24 @@ contract Constructor is V3FeeManagerTest {
     address _payoutToken,
     uint256 _payoutAmount,
     uint256 _feeSeed,
-    address _rewardReceiver
+    address _payoutReceiver
   ) public {
     vm.assume(_admin != address(0) && _payoutAmount != 0);
-    uint8 _fee = _getValidGlobalFee(_feeSeed);
-    V3FeeManagerHarness _factoryOwner = new V3FeeManagerHarness(
+    uint8 _fee = _getValidProtocolFee(_feeSeed);
+    V3FeeManagerHarness _feeManager = new V3FeeManagerHarness(
       _admin,
       IUniswapV3FactoryOwnerActions(_factory),
       IERC20(_payoutToken),
       _payoutAmount,
       _fee,
-      address(_rewardReceiver)
+      address(_payoutReceiver)
     );
-    assertEq(_factoryOwner.admin(), _admin);
-    assertEq(address(_factoryOwner.FACTORY()), address(_factory));
-    assertEq(address(_factoryOwner.PAYOUT_TOKEN()), address(_payoutToken));
-    assertEq(_factoryOwner.payoutAmount(), _payoutAmount);
-    assertEq(address(_factoryOwner.REWARD_RECEIVER()), _rewardReceiver);
-    assertEq(_factoryOwner.globalProtocolFee(), _fee);
+    assertEq(_feeManager.admin(), _admin);
+    assertEq(address(_feeManager.FACTORY()), address(_factory));
+    assertEq(address(_feeManager.PAYOUT_TOKEN()), address(_payoutToken));
+    assertEq(_feeManager.payoutAmount(), _payoutAmount);
+    assertEq(address(_feeManager.PAYOUT_RECEIVER()), _payoutReceiver);
+    assertEq(_feeManager.globalProtocolFee(), _fee);
   }
 
   function testFuzz_EmitsAdminSetEvent(
@@ -110,10 +145,10 @@ contract Constructor is V3FeeManagerTest {
     address _payoutToken,
     uint256 _payoutAmount,
     uint256 _feeSeed,
-    address _rewardReceiver
+    address _payoutReceiver
   ) public {
     vm.assume(_admin != address(0) && _payoutAmount != 0);
-    uint8 _fee = _getValidGlobalFee(_feeSeed);
+    uint8 _fee = _getValidProtocolFee(_feeSeed);
 
     vm.expectEmit();
     emit V3FeeManager.AdminSet(address(0), _admin);
@@ -123,7 +158,7 @@ contract Constructor is V3FeeManagerTest {
       IERC20(_payoutToken),
       _payoutAmount,
       _fee,
-      address(_rewardReceiver)
+      address(_payoutReceiver)
     );
   }
 
@@ -133,10 +168,10 @@ contract Constructor is V3FeeManagerTest {
     address _payoutToken,
     uint256 _payoutAmount,
     uint256 _feeSeed,
-    address _rewardReceiver
+    address _payoutReceiver
   ) public {
     vm.assume(_admin != address(0) && _payoutAmount != 0);
-    uint8 _fee = _getValidGlobalFee(_feeSeed);
+    uint8 _fee = _getValidProtocolFee(_feeSeed);
 
     vm.expectEmit();
     emit V3FeeManager.PayoutAmountSet(0, _payoutAmount);
@@ -146,7 +181,7 @@ contract Constructor is V3FeeManagerTest {
       IERC20(_payoutToken),
       _payoutAmount,
       _fee,
-      address(_rewardReceiver)
+      address(_payoutReceiver)
     );
   }
 
@@ -155,10 +190,10 @@ contract Constructor is V3FeeManagerTest {
     address _payoutToken,
     uint256 _payoutAmount,
     uint256 _feeSeed,
-    address _rewardReceiver
+    address _payoutReceiver
   ) public {
     vm.assume(_payoutAmount != 0);
-    uint8 _fee = _getValidGlobalFee(_feeSeed);
+    uint8 _fee = _getValidProtocolFee(_feeSeed);
 
     vm.expectRevert(V3FeeManager.V3FeeManager__InvalidAddress.selector);
     new V3FeeManagerHarness(
@@ -167,7 +202,7 @@ contract Constructor is V3FeeManagerTest {
       IERC20(_payoutToken),
       _payoutAmount,
       _fee,
-      address(_rewardReceiver)
+      address(_payoutReceiver)
     );
   }
 
@@ -176,10 +211,10 @@ contract Constructor is V3FeeManagerTest {
     address _factory,
     address _payoutToken,
     uint256 _feeSeed,
-    address _rewardReceiver
+    address _payoutReceiver
   ) public {
     vm.assume(_admin != address(0));
-    uint8 _fee = _getValidGlobalFee(_feeSeed);
+    uint8 _fee = _getValidProtocolFee(_feeSeed);
 
     vm.expectRevert(V3FeeManager.V3FeeManager__InvalidPayoutAmount.selector);
     new V3FeeManagerHarness(
@@ -188,7 +223,7 @@ contract Constructor is V3FeeManagerTest {
       IERC20(_payoutToken),
       0,
       _fee,
-      address(_rewardReceiver)
+      address(_payoutReceiver)
     );
   }
 
@@ -198,7 +233,7 @@ contract Constructor is V3FeeManagerTest {
     address _payoutToken,
     uint256 _payoutAmount,
     uint8 _fee,
-    address _rewardReceiver
+    address _payoutReceiver
   ) public {
     vm.assume(_fee != 0 && (_fee < 4 || _fee > 10));
     vm.assume(_admin != address(0) && _payoutAmount != 0);
@@ -210,7 +245,7 @@ contract Constructor is V3FeeManagerTest {
       IERC20(_payoutToken),
       _payoutAmount,
       _fee,
-      address(_rewardReceiver)
+      address(_payoutReceiver)
     );
   }
 }
@@ -218,69 +253,69 @@ contract Constructor is V3FeeManagerTest {
 contract _SetAdmin is V3FeeManagerTest {
   function testFuzz_UpdatesTheAdmin(address _newAdmin) public {
     vm.assume(_newAdmin != address(0));
-    _deployFeeManagerWithPayoutAmount(1);
+    _deployFeeManagerWithRandomNonZeroPayoutAmount();
 
-    factoryOwner.exposed_setAdmin(_newAdmin);
+    feeManager.exposed_setAdmin(_newAdmin);
 
-    assertEq(factoryOwner.admin(), _newAdmin);
+    assertEq(feeManager.admin(), _newAdmin);
   }
 
   function testFuzz_EmitsAnEventWhenUpdatingTheAdmin(address _newAdmin) public {
     vm.assume(_newAdmin != address(0));
-    _deployFeeManagerWithPayoutAmount(1);
+    _deployFeeManagerWithRandomNonZeroPayoutAmount();
 
     vm.expectEmit();
     emit V3FeeManager.AdminSet(admin, _newAdmin);
-    factoryOwner.exposed_setAdmin(_newAdmin);
+    feeManager.exposed_setAdmin(_newAdmin);
   }
 
   function test_RevertIf_TheNewAdminIsAddressZero() public {
-    _deployFeeManagerWithPayoutAmount(1);
+    _deployFeeManagerWithRandomNonZeroPayoutAmount();
 
     vm.expectRevert(V3FeeManager.V3FeeManager__InvalidAddress.selector);
-    factoryOwner.exposed_setAdmin(address(0));
+    feeManager.exposed_setAdmin(address(0));
   }
 }
 
 contract SetAdmin is V3FeeManagerTest {
   function testFuzz_UpdatesTheAdminWhenCalledByTheCurrentAdmin(address _newAdmin) public {
     vm.assume(_newAdmin != address(0));
-    _deployFeeManagerWithPayoutAmount(1);
+    _deployFeeManagerWithRandomNonZeroPayoutAmount();
 
     vm.prank(admin);
-    factoryOwner.setAdmin(_newAdmin);
+    feeManager.setAdmin(_newAdmin);
 
-    assertEq(factoryOwner.admin(), _newAdmin);
+    assertEq(feeManager.admin(), _newAdmin);
   }
 
   function testFuzz_EmitsAnEventWhenUpdatingTheAdmin(address _newAdmin) public {
     vm.assume(_newAdmin != address(0));
-    _deployFeeManagerWithPayoutAmount(1);
+    _deployFeeManagerWithRandomNonZeroPayoutAmount();
 
     vm.expectEmit();
     vm.prank(admin);
     emit V3FeeManager.AdminSet(admin, _newAdmin);
-    factoryOwner.setAdmin(_newAdmin);
+    feeManager.setAdmin(_newAdmin);
   }
 
   function testFuzz_RevertIf_TheCallerIsNotTheCurrentAdmin(address _notAdmin, address _newAdmin)
     public
   {
-    _deployFeeManagerWithPayoutAmount(1);
+    _deployFeeManagerWithRandomNonZeroPayoutAmount();
 
     vm.assume(_notAdmin != admin);
 
     vm.expectRevert(V3FeeManager.V3FeeManager__Unauthorized.selector);
     vm.prank(_notAdmin);
-    factoryOwner.setAdmin(_newAdmin);
+    feeManager.setAdmin(_newAdmin);
   }
 
   function test_RevertIf_TheNewAdminIsAddressZero() public {
-    _deployFeeManagerWithPayoutAmount(1);
+    _deployFeeManagerWithRandomNonZeroPayoutAmount();
 
     vm.expectRevert(V3FeeManager.V3FeeManager__InvalidAddress.selector);
     vm.prank(admin);
-    factoryOwner.setAdmin(address(0));
+    feeManager.setAdmin(address(0));
   }
 }
 
@@ -291,9 +326,9 @@ contract _SetPayoutAmount is V3FeeManagerTest {
     vm.assume(_newPayoutAmount != 0);
     _deployFeeManagerWithPayoutAmount(_initialPayoutAmount);
 
-    factoryOwner.exposed_setPayoutAmount(_newPayoutAmount);
+    feeManager.exposed_setPayoutAmount(_newPayoutAmount);
 
-    assertEq(factoryOwner.payoutAmount(), _newPayoutAmount);
+    assertEq(feeManager.payoutAmount(), _newPayoutAmount);
   }
 
   function testFuzz_EmitsAnEventWhenUpdatingThePayoutAmount(
@@ -306,7 +341,7 @@ contract _SetPayoutAmount is V3FeeManagerTest {
     vm.expectEmit();
     vm.prank(admin);
     emit V3FeeManager.PayoutAmountSet(_initialPayoutAmount, _newPayoutAmount);
-    factoryOwner.exposed_setPayoutAmount(_newPayoutAmount);
+    feeManager.exposed_setPayoutAmount(_newPayoutAmount);
   }
 
   function testFuzz_RevertIf_TheNewPayoutAmountIsZero(uint256 _initialPayoutAmount) public {
@@ -314,7 +349,7 @@ contract _SetPayoutAmount is V3FeeManagerTest {
 
     vm.expectRevert(V3FeeManager.V3FeeManager__InvalidPayoutAmount.selector);
     vm.prank(admin);
-    factoryOwner.exposed_setPayoutAmount(0);
+    feeManager.exposed_setPayoutAmount(0);
   }
 }
 
@@ -327,9 +362,9 @@ contract SetPayoutAmount is V3FeeManagerTest {
     _deployFeeManagerWithPayoutAmount(_initialPayoutAmount);
 
     vm.prank(admin);
-    factoryOwner.setPayoutAmount(_newPayoutAmount);
+    feeManager.setPayoutAmount(_newPayoutAmount);
 
-    assertEq(factoryOwner.payoutAmount(), _newPayoutAmount);
+    assertEq(feeManager.payoutAmount(), _newPayoutAmount);
   }
 
   function testFuzz_EmitsAnEventWhenUpdatingThePayoutAmount(
@@ -342,7 +377,7 @@ contract SetPayoutAmount is V3FeeManagerTest {
     vm.expectEmit();
     vm.prank(admin);
     emit V3FeeManager.PayoutAmountSet(_initialPayoutAmount, _newPayoutAmount);
-    factoryOwner.setPayoutAmount(_newPayoutAmount);
+    feeManager.setPayoutAmount(_newPayoutAmount);
   }
 
   function testFuzz_RevertIf_TheCallerIsNotAdmin(
@@ -355,7 +390,7 @@ contract SetPayoutAmount is V3FeeManagerTest {
 
     vm.expectRevert(V3FeeManager.V3FeeManager__Unauthorized.selector);
     vm.prank(_notAdmin);
-    factoryOwner.setPayoutAmount(_newPayoutAmount);
+    feeManager.setPayoutAmount(_newPayoutAmount);
   }
 
   function testFuzz_RevertIf_TheNewPayoutAmountIsZero(uint256 _initialPayoutAmount) public {
@@ -363,7 +398,7 @@ contract SetPayoutAmount is V3FeeManagerTest {
 
     vm.expectRevert(V3FeeManager.V3FeeManager__InvalidPayoutAmount.selector);
     vm.prank(admin);
-    factoryOwner.setPayoutAmount(0);
+    feeManager.setPayoutAmount(0);
   }
 }
 
@@ -373,9 +408,9 @@ contract _SetGlobalProtocolFee is V3FeeManagerTest {
   function testFuzz_SetsTheGlobalProtocolFee(uint256 _initFeeSeed, uint256 _updatedFeeSeed) public {
     _deployFeeManagerWithPayoutAndFeeAmount(PAYOUT_AMOUNT, _initFeeSeed);
 
-    uint8 _updatedFee = _getValidGlobalFee(_updatedFeeSeed);
-    factoryOwner.exposed_setGlobalProtocolFee(_updatedFee);
-    assertEq(factoryOwner.globalProtocolFee(), _updatedFee);
+    uint8 _updatedFee = _getValidProtocolFee(_updatedFeeSeed);
+    feeManager.exposed_setGlobalProtocolFee(_updatedFee);
+    assertEq(feeManager.globalProtocolFee(), _updatedFee);
   }
 
   function testFuzz_EmitsGlobalProtocolFeeSetEvent(uint256 _initFeeSeed, uint256 _updatedFeeSeed)
@@ -383,10 +418,10 @@ contract _SetGlobalProtocolFee is V3FeeManagerTest {
   {
     _deployFeeManagerWithPayoutAndFeeAmount(PAYOUT_AMOUNT, _initFeeSeed);
 
-    uint8 _updatedFee = _getValidGlobalFee(_updatedFeeSeed);
+    uint8 _updatedFee = _getValidProtocolFee(_updatedFeeSeed);
     vm.expectEmit();
-    emit V3FeeManager.GlobalProtocolFeeSet(factoryOwner.globalProtocolFee(), _updatedFee);
-    factoryOwner.exposed_setGlobalProtocolFee(_updatedFee);
+    emit V3FeeManager.GlobalProtocolFeeSet(feeManager.globalProtocolFee(), _updatedFee);
+    feeManager.exposed_setGlobalProtocolFee(_updatedFee);
   }
 
   function testFuzz_RevertIf_FeeIsLow(uint256 _initFeeSeed, uint256 _updatedFeeSeed) public {
@@ -394,7 +429,7 @@ contract _SetGlobalProtocolFee is V3FeeManagerTest {
 
     uint8 _updatedFee = uint8(bound(_updatedFeeSeed, 1, 3));
     vm.expectRevert(V3FeeManager.V3FeeManager__InvalidGlobalProtocolFee.selector);
-    factoryOwner.exposed_setGlobalProtocolFee(_updatedFee);
+    feeManager.exposed_setGlobalProtocolFee(_updatedFee);
   }
 
   function testFuzz_RevertIf_FeeIsHigh(uint256 _initFeeSeed, uint256 _updatedFeeSeed) public {
@@ -402,7 +437,7 @@ contract _SetGlobalProtocolFee is V3FeeManagerTest {
 
     uint8 _updatedFee = uint8(bound(_updatedFeeSeed, 11, type(uint8).max));
     vm.expectRevert(V3FeeManager.V3FeeManager__InvalidGlobalProtocolFee.selector);
-    factoryOwner.exposed_setGlobalProtocolFee(_updatedFee);
+    feeManager.exposed_setGlobalProtocolFee(_updatedFee);
   }
 }
 
@@ -412,11 +447,11 @@ contract SetGlobalProtocolFee is V3FeeManagerTest {
   function testFuzz_SetsTheGlobalProtocolFee(uint256 _initFeeSeed, uint256 _updatedFeeSeed) public {
     _deployFeeManagerWithPayoutAndFeeAmount(PAYOUT_AMOUNT, _initFeeSeed);
 
-    uint8 _updatedFee = _getValidGlobalFee(_updatedFeeSeed);
+    uint8 _updatedFee = _getValidProtocolFee(_updatedFeeSeed);
 
     vm.prank(admin);
-    factoryOwner.setGlobalProtocolFee(_updatedFee);
-    assertEq(factoryOwner.globalProtocolFee(), _updatedFee);
+    feeManager.setGlobalProtocolFee(_updatedFee);
+    assertEq(feeManager.globalProtocolFee(), _updatedFee);
   }
 
   function testFuzz_EmitsGlobalProtocolFeeSetEvent(uint256 _initFeeSeed, uint256 _updatedFeeSeed)
@@ -424,12 +459,12 @@ contract SetGlobalProtocolFee is V3FeeManagerTest {
   {
     _deployFeeManagerWithPayoutAndFeeAmount(PAYOUT_AMOUNT, _initFeeSeed);
 
-    uint8 _updatedFee = _getValidGlobalFee(_updatedFeeSeed);
+    uint8 _updatedFee = _getValidProtocolFee(_updatedFeeSeed);
 
     vm.expectEmit();
-    emit V3FeeManager.GlobalProtocolFeeSet(factoryOwner.globalProtocolFee(), _updatedFee);
+    emit V3FeeManager.GlobalProtocolFeeSet(feeManager.globalProtocolFee(), _updatedFee);
     vm.prank(admin);
-    factoryOwner.setGlobalProtocolFee(_updatedFee);
+    feeManager.setGlobalProtocolFee(_updatedFee);
   }
 
   function testFuzz_RevertIf_FeeIsLow(uint256 _initFeeSeed, uint256 _updatedFeeSeed) public {
@@ -438,7 +473,7 @@ contract SetGlobalProtocolFee is V3FeeManagerTest {
     uint8 _updatedFee = uint8(bound(_updatedFeeSeed, 1, 3));
     vm.expectRevert(V3FeeManager.V3FeeManager__InvalidGlobalProtocolFee.selector);
     vm.prank(admin);
-    factoryOwner.setGlobalProtocolFee(_updatedFee);
+    feeManager.setGlobalProtocolFee(_updatedFee);
   }
 
   function testFuzz_RevertIf_FeeIsHigh(uint256 _initFeeSeed, uint256 _updatedFeeSeed) public {
@@ -447,7 +482,7 @@ contract SetGlobalProtocolFee is V3FeeManagerTest {
     uint8 _updatedFee = uint8(bound(_updatedFeeSeed, 11, type(uint8).max));
     vm.expectRevert(V3FeeManager.V3FeeManager__InvalidGlobalProtocolFee.selector);
     vm.prank(admin);
-    factoryOwner.setGlobalProtocolFee(_updatedFee);
+    feeManager.setGlobalProtocolFee(_updatedFee);
   }
 
   function testFuzz_RevertIf_CalledByNonAdmin(
@@ -458,11 +493,11 @@ contract SetGlobalProtocolFee is V3FeeManagerTest {
     vm.assume(_nonAdmin != admin);
     _deployFeeManagerWithPayoutAndFeeAmount(PAYOUT_AMOUNT, _initFeeSeed);
 
-    uint8 _updatedFee = _getValidGlobalFee(_updatedFeeSeed);
+    uint8 _updatedFee = _getValidProtocolFee(_updatedFeeSeed);
 
     vm.expectRevert(V3FeeManager.V3FeeManager__Unauthorized.selector);
     vm.prank(_nonAdmin);
-    factoryOwner.setGlobalProtocolFee(_updatedFee);
+    feeManager.setGlobalProtocolFee(_updatedFee);
   }
 }
 
@@ -471,10 +506,10 @@ contract EnableFeeAmount is V3FeeManagerTest {
     uint24 _fee,
     int24 _tickSpacing
   ) public {
-    _deployFeeManagerWithPayoutAmount(1);
+    _deployFeeManagerWithRandomNonZeroPayoutAmount();
 
     vm.prank(admin);
-    factoryOwner.enableFeeAmount(_fee, _tickSpacing);
+    feeManager.enableFeeAmount(_fee, _tickSpacing);
 
     assertEq(factory.lastParam__enableFeeAmount_fee(), _fee);
     assertEq(factory.lastParam__enableFeeAmount_tickSpacing(), _tickSpacing);
@@ -485,41 +520,41 @@ contract EnableFeeAmount is V3FeeManagerTest {
     uint24 _fee,
     int24 _tickSpacing
   ) public {
-    _deployFeeManagerWithPayoutAmount(1);
+    _deployFeeManagerWithRandomNonZeroPayoutAmount();
     vm.assume(_notAdmin != admin);
 
     vm.expectRevert(V3FeeManager.V3FeeManager__Unauthorized.selector);
     vm.prank(_notAdmin);
-    factoryOwner.enableFeeAmount(_fee, _tickSpacing);
+    feeManager.enableFeeAmount(_fee, _tickSpacing);
   }
 }
 
 contract SetFeeProtocol is V3FeeManagerTest {
   function testFuzz_SetsPoolFeeProtocolsToGlobalFeeProtocol(uint256 _globalFeeSeed) public {
-    uint8 _fee = _getValidGlobalFee(_globalFeeSeed);
+    uint8 _fee = _getValidProtocolFee(_globalFeeSeed);
     _deployFeeManagerWithPayoutAndFeeAmount(1, _fee);
 
     vm.prank(admin);
-    factoryOwner.setFeeProtocol(pool);
+    feeManager.setFeeProtocol(pool);
 
     assertEq(pool.lastParam__setFeeProtocol_feeProtocol0(), _fee);
     assertEq(pool.lastParam__setFeeProtocol_feeProtocol1(), _fee);
   }
 
   function testFuzz_CanBeCalledByNonAdmin(address _notAdmin, uint256 _globalFeeSeed) public {
-    uint8 _fee = _getValidGlobalFee(_globalFeeSeed);
+    uint8 _fee = _getValidProtocolFee(_globalFeeSeed);
     _deployFeeManagerWithPayoutAndFeeAmount(1, _fee);
     vm.assume(_notAdmin != admin);
 
     vm.prank(_notAdmin);
-    factoryOwner.setFeeProtocol(pool);
+    feeManager.setFeeProtocol(pool);
 
     assertEq(pool.lastParam__setFeeProtocol_feeProtocol0(), _fee);
     assertEq(pool.lastParam__setFeeProtocol_feeProtocol1(), _fee);
   }
 
   function testFuzz_SetsMultiplePoolsFeeProtocolsToGlobalFeeProtocol(uint256 _globalFeeSeed) public {
-    uint8 _fee = _getValidGlobalFee(_globalFeeSeed);
+    uint8 _fee = _getValidProtocolFee(_globalFeeSeed);
     _deployFeeManagerWithPayoutAndFeeAmount(1, _fee);
 
     IUniswapV3PoolOwnerActions[] memory _pools = new IUniswapV3PoolOwnerActions[](3);
@@ -535,7 +570,7 @@ contract SetFeeProtocol is V3FeeManagerTest {
     assertEq(pool3.lastParam__setFeeProtocol_feeProtocol0(), 0);
     assertEq(pool3.lastParam__setFeeProtocol_feeProtocol1(), 0);
 
-    factoryOwner.setFeeProtocol(_pools);
+    feeManager.setFeeProtocol(_pools);
 
     assertEq(pool.lastParam__setFeeProtocol_feeProtocol0(), _fee);
     assertEq(pool.lastParam__setFeeProtocol_feeProtocol1(), _fee);
@@ -543,6 +578,229 @@ contract SetFeeProtocol is V3FeeManagerTest {
     assertEq(pool2.lastParam__setFeeProtocol_feeProtocol1(), _fee);
     assertEq(pool3.lastParam__setFeeProtocol_feeProtocol0(), _fee);
     assertEq(pool3.lastParam__setFeeProtocol_feeProtocol1(), _fee);
+  }
+
+  function testFuzz_SetsOverrideAfterOverrideUnset(
+    uint8 _feeProtocol0Initial,
+    uint8 _feeProtocol1Initial,
+    uint8 _feeProtocol0Final,
+    uint8 _feeProtocol1Final
+  ) public {
+    _deployFeeManagerWithRandomNonZeroPayoutAmount();
+    IUniswapV3PoolOwnerActions[] memory _pools = new IUniswapV3PoolOwnerActions[](1);
+    _pools[0] = IUniswapV3PoolOwnerActions(address(pool));
+    V3FeeManager.FeeProtocolOverride[] memory overrides = new V3FeeManager.FeeProtocolOverride[](1);
+    overrides[0] = V3FeeManager.FeeProtocolOverride({
+      pool: pool,
+      feeProtocol0: _feeProtocol0Initial,
+      feeProtocol1: _feeProtocol1Initial
+    });
+
+    vm.prank(admin);
+    feeManager.enactFeeProtocolOverride(overrides);
+
+    vm.prank(admin);
+    feeManager.removeFeeProtocolOverride(_pools);
+
+    overrides[0] = V3FeeManager.FeeProtocolOverride({
+      pool: pool,
+      feeProtocol0: _feeProtocol0Final,
+      feeProtocol1: _feeProtocol1Final
+    });
+    vm.prank(admin);
+    feeManager.enactFeeProtocolOverride(overrides);
+
+    assertEq(feeManager.isFeeProtocolOverridden(pool), true);
+    assertEq(pool.lastParam__setFeeProtocol_feeProtocol0(), _feeProtocol0Final);
+    assertEq(pool.lastParam__setFeeProtocol_feeProtocol1(), _feeProtocol1Final);
+  }
+
+  function testFuzz_RevertIf_FeeProtocolOverrideIsTrueWhenPassingMultiplePools(
+    address _actor,
+    uint256 _numPools,
+    uint256 _randomSeed
+  ) public {
+    _deployFeeManagerWithRandomNonZeroPayoutAmount();
+    _numPools = bound(_numPools, 1, 300);
+    uint256 _randomPoolIndex = bound(_randomSeed, 0, _numPools - 1);
+    IUniswapV3PoolOwnerActions[] memory _pools = _createPools(_numPools);
+    V3FeeManager.FeeProtocolOverride[] memory overrides = _generateValidFeeProtocolOverrides(_pools);
+
+    vm.prank(admin);
+    feeManager.enactFeeProtocolOverride(overrides);
+
+    vm.expectRevert(
+      abi.encodeWithSelector(
+        V3FeeManager.V3FeeManager__FeeProtocolOverride.selector, _pools[_randomPoolIndex]
+      )
+    );
+    vm.prank(_actor);
+    feeManager.setFeeProtocol(_pools[_randomPoolIndex]);
+  }
+
+  function testFuzz_RevertIf_FeeProtocolOverrideIsTrue(address _actor, uint256 _numPools) public {
+    _deployFeeManagerWithRandomNonZeroPayoutAmount();
+    _numPools = bound(_numPools, 1, 300);
+    IUniswapV3PoolOwnerActions[] memory _pools = _createPools(_numPools);
+    V3FeeManager.FeeProtocolOverride[] memory overrides = _generateValidFeeProtocolOverrides(_pools);
+
+    vm.prank(admin);
+    feeManager.enactFeeProtocolOverride(overrides);
+
+    vm.expectRevert(
+      abi.encodeWithSelector(V3FeeManager.V3FeeManager__FeeProtocolOverride.selector, _pools[0])
+    );
+    vm.prank(_actor);
+    feeManager.setFeeProtocol(_pools);
+  }
+}
+
+contract EnactFeeProtocolOverride is V3FeeManagerTest {
+  function testFuzz_SetsIsFeeProtocolOverride(uint8 _feeProtocol0, uint8 _feeProtocol1) public {
+    _deployFeeManagerWithRandomNonZeroPayoutAmount();
+    IUniswapV3PoolOwnerActions[] memory _pools = new IUniswapV3PoolOwnerActions[](1);
+    _pools[0] = IUniswapV3PoolOwnerActions(address(pool));
+    V3FeeManager.FeeProtocolOverride[] memory overrides = new V3FeeManager.FeeProtocolOverride[](1);
+    overrides[0] = V3FeeManager.FeeProtocolOverride({
+      pool: pool,
+      feeProtocol0: _feeProtocol0,
+      feeProtocol1: _feeProtocol1
+    });
+
+    vm.prank(admin);
+    feeManager.enactFeeProtocolOverride(overrides);
+
+    assertEq(feeManager.isFeeProtocolOverridden(pool), true);
+  }
+
+  function testFuzz_SetsFeeProtocolOverride(uint256 _numPools) public {
+    _numPools = bound(_numPools, 1, 300);
+    _deployFeeManagerWithRandomNonZeroPayoutAmount();
+    IUniswapV3PoolOwnerActions[] memory _pools = _createPools(_numPools);
+    V3FeeManager.FeeProtocolOverride[] memory overrides = _generateValidFeeProtocolOverrides(_pools);
+
+    vm.prank(admin);
+    feeManager.enactFeeProtocolOverride(overrides);
+
+    for (uint256 i = 0; i < overrides.length; i++) {
+      assertEq(
+        MockUniswapV3Pool(address(overrides[i].pool)).lastParam__setFeeProtocol_feeProtocol0(),
+        overrides[i].feeProtocol0
+      );
+      assertEq(
+        MockUniswapV3Pool(address(overrides[i].pool)).lastParam__setFeeProtocol_feeProtocol1(),
+        overrides[i].feeProtocol1
+      );
+      assertEq(feeManager.isFeeProtocolOverridden(overrides[i].pool), true);
+    }
+  }
+
+  function testFuzz_EmitsFeeProtocolOverrideEnactedEvent(uint256 _numPools) public {
+    _numPools = bound(_numPools, 1, 300);
+    _deployFeeManagerWithRandomNonZeroPayoutAmount();
+    IUniswapV3PoolOwnerActions[] memory _pools = _createPools(_numPools);
+    V3FeeManager.FeeProtocolOverride[] memory overrides = _generateValidFeeProtocolOverrides(_pools);
+
+    vm.expectEmit();
+    for (uint256 i = 0; i < overrides.length; i++) {
+      emit V3FeeManager.FeeProtocolOverrideEnacted(
+        overrides[i].pool, overrides[i].feeProtocol0, overrides[i].feeProtocol1
+      );
+    }
+    vm.prank(admin);
+    feeManager.enactFeeProtocolOverride(overrides);
+  }
+
+  function testFuzz_RevertIf_CalledByNonAdmin(
+    address _nonAdmin,
+    V3FeeManager.FeeProtocolOverride[] memory _overrides
+  ) public {
+    vm.assume(_nonAdmin != admin);
+    _deployFeeManagerWithRandomNonZeroPayoutAmount();
+
+    vm.expectRevert(V3FeeManager.V3FeeManager__Unauthorized.selector);
+    vm.prank(_nonAdmin);
+    feeManager.enactFeeProtocolOverride(_overrides);
+  }
+}
+
+contract RemoveFeeProtocolOverride is V3FeeManagerTest {
+  function testFuzz_RemovesFeeProtocolOverride(uint256 _numPools) public {
+    _deployFeeManagerWithRandomNonZeroPayoutAmount();
+    _numPools = bound(_numPools, 1, 300);
+    IUniswapV3PoolOwnerActions[] memory _pools = _createPools(_numPools);
+    V3FeeManager.FeeProtocolOverride[] memory _overrides =
+      _generateValidFeeProtocolOverrides(_pools);
+
+    // set up: set fee protocol override on each pool in _pools
+    vm.prank(admin);
+    feeManager.enactFeeProtocolOverride(_overrides);
+
+    // now remove the fee protocol override
+    vm.prank(admin);
+    feeManager.removeFeeProtocolOverride(_pools);
+
+    for (uint256 i = 0; i < _pools.length; i++) {
+      assertEq(feeManager.isFeeProtocolOverridden(_pools[i]), false);
+    }
+  }
+
+  function testFuzz_SetsGlobalFeeProtocolAfterRemovingOverride(uint256 _numPools) public {
+    _deployFeeManagerWithRandomNonZeroPayoutAmount();
+    _numPools = bound(_numPools, 1, 300);
+    IUniswapV3PoolOwnerActions[] memory _pools = _createPools(_numPools);
+    V3FeeManager.FeeProtocolOverride[] memory _overrides =
+      _generateValidFeeProtocolOverrides(_pools);
+
+    // set up: set fee protocol override on each pool in _pools
+    vm.prank(admin);
+    feeManager.enactFeeProtocolOverride(_overrides);
+
+    // now remove the fee protocol override
+    vm.prank(admin);
+    feeManager.removeFeeProtocolOverride(_pools);
+
+    for (uint256 i = 0; i < _pools.length; i++) {
+      assertEq(
+        MockUniswapV3Pool(address(_pools[i])).lastParam__setFeeProtocol_feeProtocol0(),
+        feeManager.globalProtocolFee()
+      );
+      assertEq(
+        MockUniswapV3Pool(address(_pools[i])).lastParam__setFeeProtocol_feeProtocol1(),
+        feeManager.globalProtocolFee()
+      );
+    }
+  }
+
+  function testFuzz_EmitsFeeProtocolOverrideRemovedEvent(uint256 _numPools) public {
+    _numPools = bound(_numPools, 1, 300);
+    _deployFeeManagerWithRandomNonZeroPayoutAmount();
+    IUniswapV3PoolOwnerActions[] memory _pools = _createPools(_numPools);
+    V3FeeManager.FeeProtocolOverride[] memory _overrides =
+      _generateValidFeeProtocolOverrides(_pools);
+
+    // set up: set fee protocol override on each pool in _pools
+    vm.prank(admin);
+    feeManager.enactFeeProtocolOverride(_overrides);
+
+    vm.expectEmit();
+    for (uint256 i = 0; i < _pools.length; i++) {
+      emit V3FeeManager.FeeProtocolOverrideRemoved(_pools[i]);
+    }
+    vm.prank(admin);
+    feeManager.removeFeeProtocolOverride(_pools);
+  }
+
+  function testFuzz_RevertIf_CalledByNonAdmin(
+    address _nonAdmin,
+    IUniswapV3PoolOwnerActions[] memory _pools
+  ) public {
+    vm.assume(_nonAdmin != admin);
+    _deployFeeManagerWithRandomNonZeroPayoutAmount();
+
+    vm.expectRevert(V3FeeManager.V3FeeManager__Unauthorized.selector);
+    vm.prank(_nonAdmin);
+    feeManager.removeFeeProtocolOverride(_pools);
   }
 }
 
@@ -562,7 +820,7 @@ contract ClaimFees is V3FeeManagerTest {
     _inputs[0] = _input;
   }
 
-  function testFuzz_TransfersThePayoutFromTheCallerToTheRewardReceiver(
+  function testFuzz_TransfersThePayoutFromTheCallerToThePayoutReceiver(
     uint256 _payoutAmount,
     address _caller,
     address _recipient,
@@ -578,11 +836,11 @@ contract ClaimFees is V3FeeManagerTest {
       _buildClaimInputs(_recipient, _amount0, _amount1);
 
     vm.startPrank(_caller);
-    payoutToken.approve(address(factoryOwner), _payoutAmount);
-    factoryOwner.claimFees(_inputDataArray);
+    payoutToken.approve(address(feeManager), _payoutAmount);
+    feeManager.claimFees(_inputDataArray);
     vm.stopPrank();
 
-    assertEq(payoutToken.balanceOf(rewardReceiver), _payoutAmount);
+    assertEq(payoutToken.balanceOf(payoutReceiver), _payoutAmount);
   }
 
   function testFuzz_CallsPoolCollectProtocolMethodWithRecipientAndAmountsRequestedAndReturnsForwardedFeeAmountsFromPool(
@@ -601,8 +859,8 @@ contract ClaimFees is V3FeeManagerTest {
       _buildClaimInputs(_recipient, _amount0, _amount1);
 
     vm.startPrank(_caller);
-    payoutToken.approve(address(factoryOwner), _payoutAmount);
-    V3FeeManager.ClaimOutputData[] memory _claimOutputs = factoryOwner.claimFees(_inputDataArray);
+    payoutToken.approve(address(feeManager), _payoutAmount);
+    V3FeeManager.ClaimOutputData[] memory _claimOutputs = feeManager.claimFees(_inputDataArray);
     vm.stopPrank();
 
     V3FeeManager.ClaimOutputData memory _claimOutput = _claimOutputs[0];
@@ -630,10 +888,10 @@ contract ClaimFees is V3FeeManagerTest {
       _buildClaimInputs(_recipient, _amount0, _amount1);
 
     vm.startPrank(_caller);
-    payoutToken.approve(address(factoryOwner), _payoutAmount);
+    payoutToken.approve(address(feeManager), _payoutAmount);
     vm.expectEmit();
     emit V3FeeManager.FeesClaimed(address(pool), _caller, _recipient, _amount0, _amount1);
-    factoryOwner.claimFees(_inputDataArray);
+    feeManager.claimFees(_inputDataArray);
     vm.stopPrank();
   }
 
@@ -653,7 +911,7 @@ contract ClaimFees is V3FeeManagerTest {
     payoutToken.mint(_caller, _mintAmount);
 
     vm.startPrank(_caller);
-    payoutToken.approve(address(factoryOwner), _payoutAmount);
+    payoutToken.approve(address(feeManager), _payoutAmount);
 
     V3FeeManager.ClaimInputData[] memory _inputDataArray =
       _buildClaimInputs(_recipient, _amount0, _amount1);
@@ -663,7 +921,7 @@ contract ClaimFees is V3FeeManagerTest {
         IERC20Errors.ERC20InsufficientBalance.selector, _caller, _mintAmount, _payoutAmount
       )
     );
-    factoryOwner.claimFees(_inputDataArray);
+    feeManager.claimFees(_inputDataArray);
     vm.stopPrank();
   }
 
@@ -683,7 +941,7 @@ contract ClaimFees is V3FeeManagerTest {
     payoutToken.mint(_caller, _payoutAmount);
 
     vm.startPrank(_caller);
-    payoutToken.approve(address(factoryOwner), _approveAmount);
+    payoutToken.approve(address(feeManager), _approveAmount);
 
     V3FeeManager.ClaimInputData[] memory _inputDataArray =
       _buildClaimInputs(_recipient, _amount0, _amount1);
@@ -691,12 +949,12 @@ contract ClaimFees is V3FeeManagerTest {
     vm.expectRevert(
       abi.encodeWithSelector(
         IERC20Errors.ERC20InsufficientAllowance.selector,
-        address(factoryOwner),
+        address(feeManager),
         _approveAmount,
         _payoutAmount
       )
     );
-    factoryOwner.claimFees(_inputDataArray);
+    feeManager.claimFees(_inputDataArray);
     vm.stopPrank();
   }
 
@@ -726,14 +984,21 @@ contract ClaimFees is V3FeeManagerTest {
     payoutToken.mint(_caller, _payoutAmount);
 
     vm.startPrank(_caller);
-    payoutToken.approve(address(factoryOwner), _payoutAmount);
+    payoutToken.approve(address(feeManager), _payoutAmount);
 
     V3FeeManager.ClaimInputData[] memory _inputDataArray =
       _buildClaimInputs(_recipient, _amount0Requested, _amount1Requested);
 
     vm.expectRevert(V3FeeManager.V3FeeManager__InsufficientFeesCollected.selector);
-    factoryOwner.claimFees(_inputDataArray);
+    feeManager.claimFees(_inputDataArray);
     vm.stopPrank();
+  }
+
+  function test_RevertIf_NoClaimInputsProvided() public {
+    _deployFeeManagerWithRandomNonZeroPayoutAmount();
+
+    vm.expectRevert(V3FeeManager.V3FeeManager__NoClaimInputProvided.selector);
+    feeManager.claimFees(new V3FeeManager.ClaimInputData[](0));
   }
 
   function testFuzz_TransfersPayoutForCollectingFeesFromMultiplePools(
@@ -754,7 +1019,7 @@ contract ClaimFees is V3FeeManagerTest {
     _amount3 = uint128(bound(_amount3, 1, type(uint128).max));
 
     vm.assume(
-      _caller != address(0) && _caller != rewardReceiver && _recipientA != address(0)
+      _caller != address(0) && _caller != payoutReceiver && _recipientA != address(0)
         && _recipientB != address(0)
     );
     payoutToken.mint(_caller, _payoutAmount);
@@ -775,18 +1040,18 @@ contract ClaimFees is V3FeeManagerTest {
     _inputs[0] = _inputA;
     _inputs[1] = _inputB;
 
-    assertEq(payoutToken.balanceOf(rewardReceiver), 0);
+    assertEq(payoutToken.balanceOf(payoutReceiver), 0);
 
     vm.startPrank(_caller);
-    payoutToken.approve(address(factoryOwner), _payoutAmount);
+    payoutToken.approve(address(feeManager), _payoutAmount);
     vm.expectEmit();
     emit V3FeeManager.FeesClaimed(address(pool), _caller, _recipientA, _amount0, _amount1);
     vm.expectEmit();
     emit V3FeeManager.FeesClaimed(address(pool2), _caller, _recipientB, _amount2, _amount3);
-    factoryOwner.claimFees(_inputs);
+    feeManager.claimFees(_inputs);
     vm.stopPrank();
 
-    assertEq(payoutToken.balanceOf(rewardReceiver), _payoutAmount);
+    assertEq(payoutToken.balanceOf(payoutReceiver), _payoutAmount);
 
     assertEq(pool.lastParam__collectProtocol_recipient(), _recipientA);
     assertEq(pool2.lastParam__collectProtocol_recipient(), _recipientB);
@@ -814,7 +1079,7 @@ contract ClaimFees is V3FeeManagerTest {
     _amount3 = uint128(bound(_amount3, 1, type(uint128).max));
 
     vm.assume(
-      _caller != address(0) && _caller != rewardReceiver && _recipientA != address(0)
+      _caller != address(0) && _caller != payoutReceiver && _recipientA != address(0)
         && _recipientB != address(0)
     );
     payoutToken.mint(_caller, _payoutAmount);
@@ -847,13 +1112,13 @@ contract ClaimFees is V3FeeManagerTest {
     }
 
     vm.startPrank(_caller);
-    payoutToken.approve(address(factoryOwner), _payoutAmount);
+    payoutToken.approve(address(feeManager), _payoutAmount);
     vm.expectRevert(V3FeeManager.V3FeeManager__InsufficientFeesCollected.selector);
-    factoryOwner.claimFees(_inputs);
+    feeManager.claimFees(_inputs);
     vm.stopPrank();
 
     // Nothing was transferred or collected.
-    assertEq(payoutToken.balanceOf(rewardReceiver), 0);
+    assertEq(payoutToken.balanceOf(payoutReceiver), 0);
     assertEq(pool.lastParam__collectProtocol_recipient(), address(0));
     assertEq(pool2.lastParam__collectProtocol_recipient(), address(0));
     assertEq(pool.lastParam__collectProtocol_amount0Requested(), 0);
@@ -875,7 +1140,7 @@ contract _ClaimFees is V3FeeManagerTest {
   ) public {
     _deployFeeManagerWithPayoutAmount(_payoutAmount);
 
-    vm.assume(_caller != address(0) && _caller != rewardReceiver && _recipient != address(0));
+    vm.assume(_caller != address(0) && _caller != payoutReceiver && _recipient != address(0));
 
     V3FeeManager.ClaimInputData memory _input = V3FeeManager.ClaimInputData({
       pool: pool,
@@ -889,7 +1154,7 @@ contract _ClaimFees is V3FeeManagerTest {
     pool.setNextReturn__collectProtocol(_amount0, _amount1);
 
     vm.prank(_caller);
-    V3FeeManager.ClaimOutputData memory _output = factoryOwner.exposed_claimFees(_input);
+    V3FeeManager.ClaimOutputData memory _output = feeManager.exposed_claimFees(_input);
     vm.stopPrank();
 
     assertEq(address(_output.pool), address(pool));
@@ -906,7 +1171,7 @@ contract _ClaimFees is V3FeeManagerTest {
   ) public {
     _deployFeeManagerWithPayoutAmount(_payoutAmount);
 
-    vm.assume(_caller != address(0) && _caller != rewardReceiver && _recipient != address(0));
+    vm.assume(_caller != address(0) && _caller != payoutReceiver && _recipient != address(0));
 
     V3FeeManager.ClaimInputData memory _input = V3FeeManager.ClaimInputData({
       pool: pool,
@@ -916,7 +1181,7 @@ contract _ClaimFees is V3FeeManagerTest {
     });
 
     vm.prank(_caller);
-    factoryOwner.exposed_claimFees(_input);
+    feeManager.exposed_claimFees(_input);
     vm.stopPrank();
 
     assertEq(pool.lastParam__collectProtocol_recipient(), _recipient);
@@ -935,7 +1200,7 @@ contract _ClaimFees is V3FeeManagerTest {
   ) public {
     _deployFeeManagerWithPayoutAmount(_payoutAmount);
 
-    vm.assume(_caller != address(0) && _caller != rewardReceiver && _recipient != address(0));
+    vm.assume(_caller != address(0) && _caller != payoutReceiver && _recipient != address(0));
 
     V3FeeManager.ClaimInputData memory _input = V3FeeManager.ClaimInputData({
       pool: pool,
@@ -951,7 +1216,7 @@ contract _ClaimFees is V3FeeManagerTest {
     vm.expectEmit();
     emit V3FeeManager.FeesClaimed(address(pool), _caller, _recipient, _amount0, _amount1);
     vm.prank(_caller);
-    factoryOwner.exposed_claimFees(_input);
+    feeManager.exposed_claimFees(_input);
     vm.stopPrank();
   }
 
@@ -966,7 +1231,7 @@ contract _ClaimFees is V3FeeManagerTest {
   ) public {
     _deployFeeManagerWithPayoutAmount(_payoutAmount);
 
-    vm.assume(_caller != address(0) && _caller != rewardReceiver && _recipient != address(0));
+    vm.assume(_caller != address(0) && _caller != payoutReceiver && _recipient != address(0));
 
     _amount0Requested = uint128(bound(_amount0Requested, 1, type(uint128).max));
     _amount1Requested = uint128(bound(_amount1Requested, 1, type(uint128).max));
@@ -985,7 +1250,7 @@ contract _ClaimFees is V3FeeManagerTest {
 
     vm.expectRevert(V3FeeManager.V3FeeManager__InsufficientFeesCollected.selector);
     vm.prank(_caller);
-    factoryOwner.exposed_claimFees(_input);
+    feeManager.exposed_claimFees(_input);
     vm.stopPrank();
   }
 }
@@ -995,7 +1260,7 @@ contract _RevertIfNotAdmin is V3FeeManagerTest {
     _deployFeeManagerWithPayoutAmount(_payoutAmount);
 
     vm.prank(admin);
-    factoryOwner.exposed_revertIfNotAdmin();
+    feeManager.exposed_revertIfNotAdmin();
   }
 
   function testFuzz_RevertIf_CalledByNonAdmin(address _notAdmin, uint256 _payoutAmount) public {
@@ -1004,6 +1269,6 @@ contract _RevertIfNotAdmin is V3FeeManagerTest {
 
     vm.expectRevert(V3FeeManager.V3FeeManager__Unauthorized.selector);
     vm.prank(_notAdmin);
-    factoryOwner.exposed_revertIfNotAdmin();
+    feeManager.exposed_revertIfNotAdmin();
   }
 }

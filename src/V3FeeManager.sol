@@ -16,7 +16,7 @@ import {IUniswapV3FactoryOwnerActions} from "src/interfaces/IUniswapV3FactoryOwn
 ///
 /// This contract has an admin. The admin retains exclusive right to:
 ///   * enable fee amounts on the v3 factory; this behavior exercises owner
-///     priviledges
+///     privileges
 ///   * set a global protocol fee level; this fee (collected and retained for
 ///     the Uniswap protocol) can be enabled on any pool created by the v3
 ///     factory via the public `setFeeProtocol` function, which also exercises
@@ -24,7 +24,7 @@ import {IUniswapV3FactoryOwnerActions} from "src/interfaces/IUniswapV3FactoryOwn
 ///   * set the payout amount; this is the amount of `PAYOUT_TOKEN` that must be
 ///     transferred in order for an address to claim protocol fees from one or
 ///     more pools; see the `claimFees` function for more details
-///   * set the payout receiver address; this is the address which recieves
+///   * set the payout receiver address; this is the address which receives
 ///     transfers of PAYOUT_TOKEN when protocol fees are claimed
 ///   * transfer admin privileges to another address
 ///
@@ -33,9 +33,9 @@ import {IUniswapV3FactoryOwnerActions} from "src/interfaces/IUniswapV3FactoryOwn
 /// is instead exposed publicly by this contract's `claimFees` method. That
 /// method collects fees from the protocol as long as the caller pays for them
 /// with a transfer of a designated amount of `PAYOUT_TOKEN`. That payout is
-/// forwarded to a reward receiver.
+/// forwarded to a payout receiver.
 ///
-/// Another priviledged v3 factory function that is publically exposed is the
+/// Another privileged v3 factory function that is publicly exposed is the
 /// `setFeeProtocol` function. This function sets the protocol fees on a given
 /// v3 pool to the `globalProtocolFee` defined in this contract.
 contract V3FeeManager {
@@ -66,6 +66,14 @@ contract V3FeeManager {
     uint8 indexed oldGlobalProtocolFee, uint8 indexed newGlobalProtocolFee
   );
 
+  /// @notice Emitted when the admin enacts the fee protocol override for a pool.
+  event FeeProtocolOverrideEnacted(
+    IUniswapV3PoolOwnerActions indexed pool, uint8 indexed feeProtocol0, uint8 indexed feeProtocol1
+  );
+
+  /// @notice Emitted when the admin removes the fee protocol override for a pool.
+  event FeeProtocolOverrideRemoved(IUniswapV3PoolOwnerActions indexed pool);
+
   /// @notice The data structure accepted as an argument to `claimFees`.
   struct ClaimInputData {
     /// @notice The Uniswap v3 pool from which protocol fees are collected.
@@ -90,6 +98,16 @@ contract V3FeeManager {
     uint128 amount1;
   }
 
+  /// @notice The data structure accepted as an argument to `setFeeProtocolOverride`.
+  struct FeeProtocolOverride {
+    /// @notice The Uniswap v3 pool on which the fee protocol is being set.
+    IUniswapV3PoolOwnerActions pool;
+    /// @notice The fee protocol for token0.
+    uint8 feeProtocol0;
+    /// @notice The fee protocol for token1.
+    uint8 feeProtocol1;
+  }
+
   /// @notice Thrown when an unauthorized account calls a privileged function.
   error V3FeeManager__Unauthorized();
 
@@ -108,6 +126,10 @@ contract V3FeeManager {
 
   /// @notice Thrown when the caller does not provide any claim information.
   error V3FeeManager__NoClaimInputProvided();
+
+  /// @notice Thrown when attempting to set the fee protocol for a pool that has a fee protocol
+  /// override.
+  error V3FeeManager__FeeProtocolOverride(IUniswapV3PoolOwnerActions pool);
 
   /// @notice The instance of the Uniswap v3 factory contract which this contract will own.
   IUniswapV3FactoryOwnerActions public immutable FACTORY;
@@ -132,11 +154,14 @@ contract V3FeeManager {
   uint256 public payoutAmount;
 
   /// @notice The contract that receives the payout when pool fees are claimed.
-  address public immutable REWARD_RECEIVER;
+  address public immutable PAYOUT_RECEIVER;
 
   /// @notice The address that can call privileged methods, including passthrough owner functions
   /// to the factory itself.
   address public admin;
+
+  /// @notice A mapping of pool addresses to whether the fee protocol is overridden for that pool.
+  mapping(IUniswapV3PoolOwnerActions => bool) public isFeeProtocolOverridden;
 
   /// @param _admin The initial admin address for this deployment. Cannot be zero address.
   /// @param _factory The v3 factory instance for which this deployment will serve as owner.
@@ -145,14 +170,14 @@ contract V3FeeManager {
   /// to claim fees from a pool.
   /// @param _globalProtocolFee The initial global protocol fee to be set on all
   /// pools created by the factory, `_factory`.
-  /// @param _rewardReceiver The contract that will receive the payout when fees are claimed.
+  /// @param _payoutReceiver The contract that will receive the payout when fees are claimed.
   constructor(
     address _admin,
     IUniswapV3FactoryOwnerActions _factory,
     IERC20 _payoutToken,
     uint256 _payoutAmount,
     uint8 _globalProtocolFee,
-    address _rewardReceiver
+    address _payoutReceiver
   ) {
     _setAdmin(_admin);
     _setPayoutAmount(_payoutAmount);
@@ -160,7 +185,7 @@ contract V3FeeManager {
 
     FACTORY = _factory;
     PAYOUT_TOKEN = _payoutToken;
-    REWARD_RECEIVER = _rewardReceiver;
+    PAYOUT_RECEIVER = _payoutReceiver;
   }
 
   /// @notice Internal function to change the admin.
@@ -196,6 +221,36 @@ contract V3FeeManager {
     _setAdmin(_newAdmin);
   }
 
+  /// @notice Enact the fee protocol override for a given pool or pools. Must be called by admin.
+  /// @param _feeProtocolOverrides The pools and fee protocol args to set.
+  /// @dev Emits `FeeProtocolOverrideEnacted` event for each pool.
+  function enactFeeProtocolOverride(FeeProtocolOverride[] calldata _feeProtocolOverrides) external {
+    _revertIfNotAdmin();
+    for (uint256 _i = 0; _i < _feeProtocolOverrides.length; _i++) {
+      isFeeProtocolOverridden[_feeProtocolOverrides[_i].pool] = true;
+      IUniswapV3PoolOwnerActions(_feeProtocolOverrides[_i].pool).setFeeProtocol(
+        _feeProtocolOverrides[_i].feeProtocol0, _feeProtocolOverrides[_i].feeProtocol1
+      );
+      emit FeeProtocolOverrideEnacted(
+        _feeProtocolOverrides[_i].pool,
+        _feeProtocolOverrides[_i].feeProtocol0,
+        _feeProtocolOverrides[_i].feeProtocol1
+      );
+    }
+  }
+
+  /// @notice Remove the fee protocol override for a given pool or pools. Must be called by admin.
+  /// @param _pools The pools to remove the fee protocol override for.
+  /// @dev Emits `FeeProtocolOverrideRemoved` event for each pool.
+  function removeFeeProtocolOverride(IUniswapV3PoolOwnerActions[] calldata _pools) external {
+    _revertIfNotAdmin();
+    for (uint256 _i = 0; _i < _pools.length; _i++) {
+      isFeeProtocolOverridden[_pools[_i]] = false;
+      _pools[_i].setFeeProtocol(globalProtocolFee, globalProtocolFee);
+      emit FeeProtocolOverrideRemoved(_pools[_i]);
+    }
+  }
+
   /// @notice Update the payout amount to a new value. Must be called by admin.
   /// @param _newPayoutAmount The value that will be the new payout amount.
   function setPayoutAmount(uint256 _newPayoutAmount) external {
@@ -225,8 +280,10 @@ contract V3FeeManager {
   /// @notice Passthrough method that sets the protocol fee on a v3 pool to the
   /// `globalProtocolFee` defined in this contract. May be called by any address.
   /// @param _pool The Uniswap v3 pool on which the protocol fee is being set.
+  /// @dev If the pool has a fee protocol override, this call will revert.
   /// @dev See docs on IUniswapV3PoolOwnerActions for more information on forwarded params.
   function setFeeProtocol(IUniswapV3PoolOwnerActions _pool) external {
+    if (isFeeProtocolOverridden[_pool]) revert V3FeeManager__FeeProtocolOverride(_pool);
     // The same globalProtocolFee is set for both protocols.
     _pool.setFeeProtocol(globalProtocolFee, globalProtocolFee);
   }
@@ -235,8 +292,10 @@ contract V3FeeManager {
   /// to the `globalProtocolFee` defined in this contract. May be called by any
   /// address.
   /// @param _pools The Uniswap v3 pools on which the protocol fee is being set.
+  /// @dev If any pool has a fee protocol override, this call will revert.
   function setFeeProtocol(IUniswapV3PoolOwnerActions[] calldata _pools) external {
     for (uint256 _i = 0; _i < _pools.length; _i++) {
+      if (isFeeProtocolOverridden[_pools[_i]]) revert V3FeeManager__FeeProtocolOverride(_pools[_i]);
       _pools[_i].setFeeProtocol(globalProtocolFee, globalProtocolFee);
     }
   }
@@ -244,7 +303,7 @@ contract V3FeeManager {
   /// @notice Public method that allows any caller to claim the protocol fees accrued by a given
   /// Uniswap v3 pool contract. Caller must pre-approve this factory owner contract on the payout
   /// token contract for at least the payout amount, which is transferred from the caller to the
-  /// reward receiver. The protocol fees collected are sent to a receiver of the caller's
+  /// payout receiver. The protocol fees collected are sent to a receiver of the caller's
   /// specification.
   ///
   /// A quick example can help illustrate why an external party, such as an MEV searcher, would be
@@ -295,11 +354,11 @@ contract V3FeeManager {
     if (_claimInputs.length == 0) revert V3FeeManager__NoClaimInputProvided();
     _claimOutputs = new ClaimOutputData[](_claimInputs.length);
 
-    PAYOUT_TOKEN.safeTransferFrom(msg.sender, REWARD_RECEIVER, payoutAmount);
+    PAYOUT_TOKEN.safeTransferFrom(msg.sender, PAYOUT_RECEIVER, payoutAmount);
 
-    for (uint256 i = 0; i < _claimInputs.length; i++) {
-      ClaimInputData calldata _input = _claimInputs[i];
-      _claimOutputs[i] = _claimFees(_input);
+    for (uint256 _i = 0; _i < _claimInputs.length; _i++) {
+      ClaimInputData calldata _input = _claimInputs[_i];
+      _claimOutputs[_i] = _claimFees(_input);
     }
   }
 
