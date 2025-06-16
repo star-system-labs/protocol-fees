@@ -163,9 +163,9 @@ contract V3FeeManager {
   /// @param _factory The v3 factory instance for which this deployment will serve as owner.
   /// @param _payoutToken The ERC-20 token in which payouts will be denominated.
   /// @param _payoutAmount The initial raw amount of the payout token required
-  /// to claim fees from a pool.
+  /// to claim fees from a pool. Must be greater than zero.
   /// @param _globalProtocolFee The initial global protocol fee to be set on all
-  /// pools created by the factory, `_factory`.
+  /// pools created by the factory, `_factory`. Must be 0 or 4-10 inclusive.
   /// @param _payoutReceiver The contract that will receive the payout when fees are claimed.
   constructor(
     address _admin,
@@ -232,6 +232,10 @@ contract V3FeeManager {
   /// Must be called by the admin.
   /// @param _globalProtocolFee The new global protocol fee to be set.
   /// @dev Emits `GlobalProtocolFeeSet` event.
+  /// @dev If the global protocol fee is reduced, MEV searchers and UNI token holders may not be
+  /// incentivized to call `setFeeProtocol`, as they'd lose out on fees at the former fee rate.
+  /// Governance might consider some plan for incentivizing or subsidizing calls to
+  /// `setFeeProtocol` in this case.
   function setGlobalProtocolFee(uint8 _globalProtocolFee) external {
     _revertIfNotAdmin();
     _setGlobalProtocolFee(_globalProtocolFee);
@@ -270,8 +274,8 @@ contract V3FeeManager {
     }
   }
 
-  /// @notice Public method that allows any caller to claim the protocol fees accrued by a given
-  /// Uniswap v3 pool contract. Caller must pre-approve this factory owner contract on the payout
+  /// @notice Public method that allows any caller to claim the protocol fees accrued by multiple
+  /// Uniswap v3 pool contracts. Caller must pre-approve this factory owner contract on the payout
   /// token contract for at least the payout amount, which is transferred from the caller to the
   /// payout receiver. The protocol fees collected are sent to a receiver of the caller's
   /// specification.
@@ -286,11 +290,13 @@ contract V3FeeManager {
   /// party to arbitrage the fees by calling this method, paying 10 WETH (worth $25K) and getting
   /// more than $25K worth of stablecoins. (This ignores other details, which real searchers would
   /// take into consideration, such as the gas/builder fee they would pay to call the method).
+  /// Effectively, as each pool accrues fees, it eventually becomes possible to "buy" the pool fees
+  /// for less than they are valued by "paying" the the payout amount of the payout token.
   ///
-  /// The same mechanic applies regardless of what the pool currencies, payout token, or payout
-  /// amount are. Effectively, as each pool accrues fees, it eventually becomes possible to "buy"
-  /// the pool fees for less than they are valued by "paying" the the payout amount of the payout
-  /// token.
+  /// The same mechanic can be extended to include multiple pools at once. When a searcher notices
+  /// that the sum of the protocol fees in multiple pools is greater than the payout amount, they
+  /// can call this method to claim the fees from all of the pools in a single transaction.
+  ///
   /// `payoutAmount` may be changed by the admin (governance). Any proposal that changes this amount
   /// is expected to be subject to the governance process, including a timelocked execution, and so
   /// it's unlikely that a caller would be surprised by a change in this value. Still, callers
@@ -304,9 +310,11 @@ contract V3FeeManager {
   /// - `pool`: The Uniswap v3 pool from which protocol fees are collected.
   /// - `recipient`: The address to which collected protocol fees will be sent.
   /// - `amount0Requested`: The amount of the pool's token0 to forward to the pool's collectProtocol
-  ///   function. Its maximum value will be `protocolFees.token0 - 1`.
+  ///   function. Its maximum value will be `protocolFees.token0 - 1`. Requesting more than the
+  ///   maximum value will revert.
   /// - `amount1Requested`: The amount of the pool's token1 to forward to the pool's collectProtocol
-  ///   function. Its maximum value will be `protocolFees.token0 - 1`.
+  ///   function. Its maximum value will be `protocolFees.token1 - 1`. Requesting more than the
+  ///   maximum value will revert.
   /// @return _claimOutputs The array of claim output data. Each element
   /// contains the following:
   /// - `pool`: The Uniswap v3 pool from which protocol fees were collected.
@@ -315,6 +323,8 @@ contract V3FeeManager {
   /// @dev The `UniswapV3Pool contract allows claiming a maximum of the total accrued fees minus 1.
   /// We highly recommend checking the source code of the `UniswapV3Pool` contract in order to
   /// better understand the potential constraints of the forwarded params.
+  /// @dev This function makes external calls to user-provided pool addresses. Future modifications
+  /// should consider reentrancy implications.
   function claimFees(ClaimInputData[] calldata _claimInputs)
     external
     returns (ClaimOutputData[] memory _claimOutputs)
