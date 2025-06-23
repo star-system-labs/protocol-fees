@@ -18,15 +18,17 @@ abstract contract DeployERC20FeeCollectorBaseImpl is Script {
   function run() public virtual returns (ERC20FeeCollector);
 
   /// @notice Creates the ERC20FeeCollector with the provided configuration
-  function _deploy(address payoutReceiver, address payoutToken, uint256 payoutAmount)
-    internal
-    returns (ERC20FeeCollector)
-  {
+  function _deploy(
+    address _admin,
+    address _payoutReceiver,
+    address _payoutToken,
+    uint256 _payoutAmount
+  ) internal returns (ERC20FeeCollector) {
     Vm.Wallet memory wallet = _deploymentWallet();
     vm.startBroadcast(wallet.privateKey);
 
     ERC20FeeCollector feeCollector =
-      new ERC20FeeCollector(payoutReceiver, payoutToken, payoutAmount);
+      new ERC20FeeCollector(_admin, _payoutReceiver, _payoutToken, _payoutAmount);
 
     vm.stopBroadcast();
 

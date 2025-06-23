@@ -24,6 +24,12 @@ contract ERC20FeeCollector {
     address indexed token, address indexed recipient, address indexed caller, uint256 amount
   );
 
+  /// @notice Emitted when the existing admin designates a new address as the admin.
+  event AdminSet(address indexed oldAdmin, address indexed newAdmin);
+
+  /// @notice Emitted when the admin updates the payout amount.
+  event PayoutAmountSet(uint256 indexed oldPayoutAmount, uint256 indexed newPayoutAmount);
+
   /// @notice Thrown when no claim input data is provided.
   error ERC20FeeCollector__NoClaimInputProvided();
 
@@ -36,8 +42,14 @@ contract ERC20FeeCollector {
   /// @notice Thrown when payout amount is invalid (zero).
   error ERC20FeeCollector__InvalidPayoutAmount();
 
+  /// @notice Thrown when a non-admin account calls an admin-only function.
+  error ERC20FeeCollector__Unauthorized();
+
+  /// @notice Thrown if the proposed admin address is the zero address.
+  error ERC20FeeCollector__InvalidAddress();
+
   /// @notice Data structure used to specify one or more fee amounts to be exchanged for
-  /// `PAYOUT_AMOUNT`.
+  /// the payout amount.
   /// @param token ERC20 token to claim.
   /// @param feeRecipient Address to receive the fees.
   /// @param amountRequested Amount of fee tokens to transfer.
@@ -54,20 +66,29 @@ contract ERC20FeeCollector {
   IERC20 public immutable PAYOUT_TOKEN;
 
   /// @notice Amount of payout token required to claim fees.
-  uint256 public immutable PAYOUT_AMOUNT;
+  uint256 public payoutAmount;
+
+  /// @notice The address that can call privileged methods.
+  address public admin;
 
   /// @notice Creates a new `ERC20FeeCollector` with the specified payout configuration.
+  /// @param _admin The initial admin address for this deployment.
   /// @param _payoutReceiver Address that will receive payout token payments.
   /// @param _payoutToken Address of the ERC20 token required for payouts.
   /// @param _payoutAmount Amount of payout token required to claim fees.
-  constructor(address _payoutReceiver, address _payoutToken, uint256 _payoutAmount) {
+  constructor(
+    address _admin,
+    address _payoutReceiver,
+    address _payoutToken,
+    uint256 _payoutAmount
+  ) {
+    _setAdmin(_admin);
     if (_payoutReceiver == address(0)) revert ERC20FeeCollector__InvalidPayoutReceiver();
     if (_payoutToken == address(0)) revert ERC20FeeCollector__InvalidPayoutToken();
-    if (_payoutAmount == 0) revert ERC20FeeCollector__InvalidPayoutAmount();
+    _setPayoutAmount(_payoutAmount);
 
     PAYOUT_RECEIVER = _payoutReceiver;
     PAYOUT_TOKEN = IERC20(_payoutToken);
-    PAYOUT_AMOUNT = _payoutAmount;
   }
 
   /// @notice Public method that allows any caller to claim accumulated ERC20 tokens from this
@@ -99,7 +120,7 @@ contract ERC20FeeCollector {
   function claimFees(ClaimInputData[] calldata _claimInputs) external {
     if (_claimInputs.length == 0) revert ERC20FeeCollector__NoClaimInputProvided();
 
-    PAYOUT_TOKEN.safeTransferFrom(msg.sender, PAYOUT_RECEIVER, PAYOUT_AMOUNT);
+    PAYOUT_TOKEN.safeTransferFrom(msg.sender, PAYOUT_RECEIVER, payoutAmount);
 
     for (uint256 i = 0; i < _claimInputs.length; i++) {
       ClaimInputData calldata _input = _claimInputs[i];
@@ -110,5 +131,40 @@ contract ERC20FeeCollector {
         address(_input.token), _input.feeRecipient, msg.sender, _input.amountRequested
       );
     }
+  }
+
+  /// @notice Reassign the admin role to a new address. Must be called by the existing admin.
+  /// @param _newAdmin The address of the new admin.
+  function setAdmin(address _newAdmin) external {
+    _revertIfNotAdmin();
+    _setAdmin(_newAdmin);
+  }
+
+  /// @notice Update the payout amount to a new value. Must be called by admin.
+  /// @param _newPayoutAmount The value that will be the new payout amount.
+  /// @dev The admin can front-run pending `claimFees` transactions by changing this value.
+  function setPayoutAmount(uint256 _newPayoutAmount) external {
+    _revertIfNotAdmin();
+    _setPayoutAmount(_newPayoutAmount);
+  }
+
+  /// @notice Internal function to change the admin.
+  function _setAdmin(address _newAdmin) internal {
+    if (_newAdmin == address(0)) revert ERC20FeeCollector__InvalidAddress();
+    emit AdminSet(admin, _newAdmin);
+    admin = _newAdmin;
+  }
+
+  /// @notice Internal function to change the payout amount.
+  function _setPayoutAmount(uint256 _newPayoutAmount) internal {
+    if (_newPayoutAmount == 0) revert ERC20FeeCollector__InvalidPayoutAmount();
+    emit PayoutAmountSet(payoutAmount, _newPayoutAmount);
+    payoutAmount = _newPayoutAmount;
+  }
+
+  /// @notice Ensures the msg.sender is the contract admin and reverts otherwise.
+  /// @dev Place inside methods to make them admin-only.
+  function _revertIfNotAdmin() internal view {
+    if (msg.sender != admin) revert ERC20FeeCollector__Unauthorized();
   }
 }

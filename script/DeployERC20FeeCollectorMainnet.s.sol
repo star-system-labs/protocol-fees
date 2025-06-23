@@ -8,6 +8,7 @@ import {ERC20FeeCollector} from "src/ERC20FeeCollector.sol";
 contract DeployERC20FeeCollectorMainnet is DeployERC20FeeCollectorBaseImpl, MainnetConstants {
   function run() public override returns (ERC20FeeCollector) {
     return _deploy(
+      ERC20_FEE_COLLECTOR_ADMIN,
       ERC20_FEE_COLLECTOR_PAYOUT_RECEIVER,
       ERC20_FEE_COLLECTOR_PAYOUT_TOKEN,
       ERC20_FEE_COLLECTOR_PAYOUT_AMOUNT

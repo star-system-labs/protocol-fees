@@ -13,6 +13,7 @@ contract ERC20FeeCollectorUnitTestBase is Test {
   MockERC20 public token1;
   MockERC20 public token2;
 
+  address public admin = makeAddr("admin");
   address public payoutReceiver = makeAddr("payout receiver");
   uint256 public payoutAmount = 1e18;
 
@@ -23,7 +24,7 @@ contract ERC20FeeCollectorUnitTestBase is Test {
     token1 = new MockERC20();
     token2 = new MockERC20();
 
-    feeCollector = new ERC20FeeCollector(payoutReceiver, address(payoutToken), payoutAmount);
+    feeCollector = new ERC20FeeCollector(admin, payoutReceiver, address(payoutToken), payoutAmount);
   }
 
   function _mintTokensToFeeCollector(uint256 _token1Amount, uint256 _token2Amount) internal {
@@ -39,12 +40,21 @@ contract ERC20FeeCollectorUnitTestBase is Test {
 }
 
 contract Constructor is ERC20FeeCollectorUnitTestBase {
+  function testFuzz_SetsAdmin(address _admin, uint256 _payoutAmount) public {
+    vm.assume(_admin != address(0));
+    _payoutAmount = bound(_payoutAmount, 1, type(uint128).max);
+
+    ERC20FeeCollector testCollector =
+      new ERC20FeeCollector(_admin, payoutReceiver, address(payoutToken), _payoutAmount);
+    assertEq(testCollector.admin(), _admin);
+  }
+
   function testFuzz_SetsPayoutReceiver(address _payoutReceiver, uint256 _payoutAmount) public {
     vm.assume(_payoutReceiver != address(0));
     _payoutAmount = bound(_payoutAmount, 1, type(uint128).max);
 
     ERC20FeeCollector testCollector =
-      new ERC20FeeCollector(_payoutReceiver, address(payoutToken), _payoutAmount);
+      new ERC20FeeCollector(admin, _payoutReceiver, address(payoutToken), _payoutAmount);
     assertEq(testCollector.PAYOUT_RECEIVER(), _payoutReceiver);
   }
 
@@ -53,7 +63,7 @@ contract Constructor is ERC20FeeCollectorUnitTestBase {
     _payoutAmount = bound(_payoutAmount, 1, type(uint128).max);
 
     ERC20FeeCollector testCollector =
-      new ERC20FeeCollector(payoutReceiver, _payoutToken, _payoutAmount);
+      new ERC20FeeCollector(admin, payoutReceiver, _payoutToken, _payoutAmount);
     assertEq(address(testCollector.PAYOUT_TOKEN()), _payoutToken);
   }
 
@@ -61,32 +71,62 @@ contract Constructor is ERC20FeeCollectorUnitTestBase {
     _payoutAmount = bound(_payoutAmount, 1, type(uint128).max);
 
     ERC20FeeCollector testCollector =
-      new ERC20FeeCollector(payoutReceiver, address(payoutToken), _payoutAmount);
-    assertEq(testCollector.PAYOUT_AMOUNT(), _payoutAmount);
+      new ERC20FeeCollector(admin, payoutReceiver, address(payoutToken), _payoutAmount);
+    assertEq(testCollector.payoutAmount(), _payoutAmount);
+  }
+
+  function testFuzz_EmitsAdminSetEvent(address _admin, uint256 _payoutAmount) public {
+    vm.assume(_admin != address(0));
+    _payoutAmount = bound(_payoutAmount, 1, type(uint256).max);
+
+    vm.expectEmit();
+    emit ERC20FeeCollector.AdminSet(address(0), _admin);
+
+    new ERC20FeeCollector(_admin, payoutReceiver, address(payoutToken), _payoutAmount);
+  }
+
+  function testFuzz_EmitsPayoutAmountSetEvent(address _admin, uint256 _payoutAmount) public {
+    vm.assume(_admin != address(0));
+    _payoutAmount = bound(_payoutAmount, 1, type(uint256).max);
+
+    vm.expectEmit();
+    emit ERC20FeeCollector.PayoutAmountSet(0, _payoutAmount);
+
+    new ERC20FeeCollector(_admin, payoutReceiver, address(payoutToken), _payoutAmount);
+  }
+
+  function testFuzz_RevertIf_AdminIsZeroAddress(uint256 _payoutAmount) public {
+    _payoutAmount = bound(_payoutAmount, 1, type(uint128).max);
+
+    vm.expectRevert(ERC20FeeCollector.ERC20FeeCollector__InvalidAddress.selector);
+    new ERC20FeeCollector(address(0), payoutReceiver, address(payoutToken), _payoutAmount);
   }
 
   function testFuzz_RevertIf_PayoutReceiverIsZero(uint256 _payoutAmount) public {
     _payoutAmount = bound(_payoutAmount, 1, type(uint128).max);
 
     vm.expectRevert(ERC20FeeCollector.ERC20FeeCollector__InvalidPayoutReceiver.selector);
-    new ERC20FeeCollector(address(0), address(payoutToken), _payoutAmount);
+    new ERC20FeeCollector(admin, address(0), address(payoutToken), _payoutAmount);
   }
 
   function testFuzz_RevertIf_PayoutTokenIsZero(uint256 _payoutAmount) public {
     _payoutAmount = bound(_payoutAmount, 1, type(uint128).max);
 
     vm.expectRevert(ERC20FeeCollector.ERC20FeeCollector__InvalidPayoutToken.selector);
-    new ERC20FeeCollector(payoutReceiver, address(0), _payoutAmount);
+    new ERC20FeeCollector(admin, payoutReceiver, address(0), _payoutAmount);
   }
 
-  function testFuzz_RevertIf_PayoutAmountIsZero(address _payoutReceiver, address _payoutToken)
-    public
-  {
+  function testFuzz_RevertIf_PayoutAmountIsZero(
+    address _admin,
+    address _payoutReceiver,
+    address _payoutToken
+  ) public {
+    vm.assume(_admin != address(0));
     vm.assume(_payoutReceiver != address(0));
     vm.assume(_payoutToken != address(0));
 
     vm.expectRevert(ERC20FeeCollector.ERC20FeeCollector__InvalidPayoutAmount.selector);
-    new ERC20FeeCollector(_payoutReceiver, _payoutToken, 0);
+    new ERC20FeeCollector(_admin, _payoutReceiver, _payoutToken, 0);
   }
 }
 
@@ -454,5 +494,77 @@ contract ClaimFees is ERC20FeeCollectorUnitTestBase {
     assertEq(token2.balanceOf(address(feeCollector)), initialToken2Balance);
     assertEq(token3.balanceOf(address(feeCollector)), initialToken3Balance);
     assertEq(payoutToken.balanceOf(payoutReceiver), initialPayoutTokenBalance);
+  }
+}
+
+contract SetAdmin is ERC20FeeCollectorUnitTestBase {
+  function testFuzz_SetsAdmin(address _newAdmin) public {
+    vm.assume(_newAdmin != address(0));
+
+    vm.prank(admin);
+    feeCollector.setAdmin(_newAdmin);
+
+    assertEq(feeCollector.admin(), _newAdmin);
+  }
+
+  function testFuzz_EmitsAdminSetEvent(address _newAdmin) public {
+    vm.assume(_newAdmin != address(0));
+
+    vm.expectEmit();
+    emit ERC20FeeCollector.AdminSet(admin, _newAdmin);
+
+    vm.prank(admin);
+    feeCollector.setAdmin(_newAdmin);
+  }
+
+  function testFuzz_RevertIf_CallerIsNotAdmin(address _notAdmin, address _newAdmin) public {
+    vm.assume(_notAdmin != admin);
+    vm.assume(_newAdmin != address(0));
+
+    vm.expectRevert(ERC20FeeCollector.ERC20FeeCollector__Unauthorized.selector);
+    vm.prank(_notAdmin);
+    feeCollector.setAdmin(_newAdmin);
+  }
+
+  function testFuzz_RevertIf_NewAdminIsZeroAddress() public {
+    vm.expectRevert(ERC20FeeCollector.ERC20FeeCollector__InvalidAddress.selector);
+    vm.prank(admin);
+    feeCollector.setAdmin(address(0));
+  }
+}
+
+contract SetPayoutAmount is ERC20FeeCollectorUnitTestBase {
+  function testFuzz_SetsPayoutAmount(uint256 _newPayoutAmount) public {
+    _newPayoutAmount = bound(_newPayoutAmount, 1, type(uint256).max);
+
+    vm.prank(admin);
+    feeCollector.setPayoutAmount(_newPayoutAmount);
+
+    assertEq(feeCollector.payoutAmount(), _newPayoutAmount);
+  }
+
+  function testFuzz_EmitsPayoutAmountSetEvent(uint256 _newPayoutAmount) public {
+    _newPayoutAmount = bound(_newPayoutAmount, 1, type(uint256).max);
+
+    vm.expectEmit();
+    emit ERC20FeeCollector.PayoutAmountSet(payoutAmount, _newPayoutAmount);
+
+    vm.prank(admin);
+    feeCollector.setPayoutAmount(_newPayoutAmount);
+  }
+
+  function testFuzz_RevertIf_CallerIsNotAdmin(address _notAdmin, uint256 _newPayoutAmount) public {
+    vm.assume(_notAdmin != admin);
+    _newPayoutAmount = bound(_newPayoutAmount, 1, type(uint256).max);
+
+    vm.expectRevert(ERC20FeeCollector.ERC20FeeCollector__Unauthorized.selector);
+    vm.prank(_notAdmin);
+    feeCollector.setPayoutAmount(_newPayoutAmount);
+  }
+
+  function testFuzz_RevertIf_NewPayoutAmountIsZero() public {
+    vm.expectRevert(ERC20FeeCollector.ERC20FeeCollector__InvalidPayoutAmount.selector);
+    vm.prank(admin);
+    feeCollector.setPayoutAmount(0);
   }
 }

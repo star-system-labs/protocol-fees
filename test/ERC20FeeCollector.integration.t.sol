@@ -23,13 +23,14 @@ contract ERC20FeeCollectorIntegrationTest is Test {
   IFeeToSetter public constant FEE_TO_SETTER =
     IFeeToSetter(0x18e433c7Bf8A2E1d0197CE5d8f9AFAda1A771360);
 
+  address public admin = makeAddr("admin");
   address public rewardReceiver = makeAddr("reward receiver");
   uint256 public payoutAmount = 1e18;
 
   function setUp() public {
     vm.createSelectFork(vm.rpcUrl("mainnet"), 22_496_986);
 
-    feeCollector = new ERC20FeeCollector(rewardReceiver, WETH, payoutAmount);
+    feeCollector = new ERC20FeeCollector(admin, rewardReceiver, WETH, payoutAmount);
 
     // Set up fee collection through governance
     vm.startPrank(UNISWAP_TIMELOCK);
