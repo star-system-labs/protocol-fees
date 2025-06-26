@@ -3,8 +3,8 @@ pragma solidity ^0.8.23;
 
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
-import {V3FeeManager} from "src/V3FeeManager.sol";
-import {IUniswapV3FactoryOwnerActions} from "src/interfaces/IUniswapV3FactoryOwnerActions.sol";
+import {V3FeeManager} from "../../src/V3FeeManager.sol";
+import {IUniswapV3FactoryOwnerActions} from "../../src/interfaces/IUniswapV3FactoryOwnerActions.sol";
 
 contract V3FeeManagerHarness is V3FeeManager {
   constructor(

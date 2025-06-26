@@ -8,7 +8,7 @@ import {IERC20Errors} from "@openzeppelin/contracts/interfaces/draft-IERC6093.so
 import {V3FeeManager} from "src/V3FeeManager.sol";
 import {IUniswapV3PoolOwnerActions} from "src/interfaces/IUniswapV3PoolOwnerActions.sol";
 import {IUniswapV3FactoryOwnerActions} from "src/interfaces/IUniswapV3FactoryOwnerActions.sol";
-import {V3FeeManagerHarness} from "test/harnesses/V3OwnerFactoryHarness.sol";
+import {V3FeeManagerHarness} from "test/harnesses/V3FeeManagerHarness.sol";
 import {MockERC20} from "test/mocks/MockERC20.sol";
 import {MockUniswapV3Pool} from "test/mocks/MockUniswapV3Pool.sol";
 import {MockUniswapV3Factory} from "test/mocks/MockUniswapV3Factory.sol";
