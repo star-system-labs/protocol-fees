@@ -26,8 +26,6 @@ contract DeployOwner is Script, DeployOwnerInput {
     V3FeeManager v3FeeManager = new V3FeeManager(
       UNISWAP_GOVERNOR_TIMELOCK,
       IUniswapV3FactoryOwnerActions(UNISWAP_V3_FACTORY_ADDRESS),
-      IERC20(PAYOUT_TOKEN_ADDRESS),
-      PAYOUT_AMOUNT,
       INITIAL_GLOBAL_PROTOCOL_FEE_DENOMINATOR,
       UNISTAKER_ADDRESS
     );

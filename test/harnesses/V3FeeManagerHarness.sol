@@ -10,20 +10,12 @@ contract V3FeeManagerHarness is V3FeeManager {
   constructor(
     address _admin,
     IUniswapV3FactoryOwnerActions _factory,
-    IERC20 _payoutToken,
-    uint256 _payoutAmount,
     uint8 _globalProtocolFee,
     address _rewardReceiver
-  )
-    V3FeeManager(_admin, _factory, _payoutToken, _payoutAmount, _globalProtocolFee, _rewardReceiver)
-  {}
+  ) V3FeeManager(_admin, _factory, _globalProtocolFee, _rewardReceiver) {}
 
   function exposed_setAdmin(address _newAdmin) external {
     _setAdmin(_newAdmin);
-  }
-
-  function exposed_setPayoutAmount(uint256 _payoutAmount) external {
-    _setPayoutAmount(_payoutAmount);
   }
 
   function exposed_setGlobalProtocolFee(uint8 _globalProtocolFee) external {

@@ -11,7 +11,7 @@ import {IUniswapV3FactoryOwnerActions} from "src/interfaces/IUniswapV3FactoryOwn
 /// @author [ScopeLift](https://scopelift.co)
 /// @notice A contract to manage protocol fee acquisition for Uniswap V3.
 ///
-/// It is expected that this contract will be the owner of the UniswapV3Factory and as such have
+/// It is expected that this contract will be the owner of the `UniswapV3Factory` and as such have
 /// access to privileged functions on that factory.
 ///
 /// This contract has an admin. The admin retains exclusive right to:
@@ -19,18 +19,14 @@ import {IUniswapV3FactoryOwnerActions} from "src/interfaces/IUniswapV3FactoryOwn
 ///   * set a global protocol fee level; this fee (collected and retained for the Uniswap protocol)
 ///     can be enabled on any pool created by the v3 factory via the public `setFeeProtocol`
 ///     function, which also exercises owner privileges
-///   * set the payout amount; this is the amount of `PAYOUT_TOKEN` that must be transferred in
-///     order for an address to claim protocol fees from one or more pools; see the `claimFees`
-///     function for more details
-///   * set the payout receiver address; this is the address which receives transfers of
-///     PAYOUT_TOKEN when protocol fees are claimed
+///   * set the fee receiver address; this is the address which receives transfers of
+///     protocol fees for a claimed pool.
 ///   * transfer admin privileges to another address
 ///
 /// One privileged v3 factory function that is _not_ reserved exclusively for the admin is the
 /// ability to collect protocol fees from a pool. This method is instead exposed publicly by this
-/// contract's `claimFees` method. That method collects fees from the protocol as long as the
-/// caller pays for them with a transfer of a designated amount of `PAYOUT_TOKEN`. That payout is
-/// forwarded to a payout receiver.
+/// contract's `claimFees` method. That method collects fees from the protocol and forwards them
+/// to the fee receiver.
 ///
 /// Another privileged v3 factory function that is publicly exposed is the `setFeeProtocol`
 /// function. This function sets the protocol fees on a given v3 pool to the `globalProtocolFee`
@@ -55,9 +51,6 @@ contract V3FeeManager {
   /// @notice Emitted when the existing admin designates a new address as the admin.
   event AdminSet(address indexed oldAdmin, address indexed newAdmin);
 
-  /// @notice Emitted when the admin updates the payout amount.
-  event PayoutAmountSet(uint256 indexed oldPayoutAmount, uint256 indexed newPayoutAmount);
-
   /// @notice Emitted when the admin updates the global protocol fee.
   event GlobalProtocolFeeSet(
     uint8 indexed oldGlobalProtocolFee, uint8 indexed newGlobalProtocolFee
@@ -75,8 +68,6 @@ contract V3FeeManager {
   struct ClaimInputData {
     /// @notice The Uniswap v3 pool from which protocol fees are collected.
     IUniswapV3PoolOwnerActions pool;
-    /// @notice The address to which collected protocol fees will be sent.
-    address recipient;
     /// @notice The amount of the pool's token0 to forward to the
     /// pool's `collectProtocol` function.
     uint128 amount0Requested;
@@ -111,9 +102,6 @@ contract V3FeeManager {
   /// @notice Thrown if the proposed admin is the zero address.
   error V3FeeManager__InvalidAddress();
 
-  /// @notice Thrown if the proposed payout amount is zero.
-  error V3FeeManager__InvalidPayoutAmount();
-
   /// @notice Thrown if the proposed global protocol fee is an unsupported value.
   /// Supported values are limited to 0 and 4-10 inclusive.
   error V3FeeManager__InvalidGlobalProtocolFee();
@@ -131,9 +119,6 @@ contract V3FeeManager {
   /// @notice The instance of the Uniswap v3 factory contract which this contract will own.
   IUniswapV3FactoryOwnerActions public immutable FACTORY;
 
-  /// @notice The ERC-20 token which must be used to pay for fees when claiming pool fees.
-  IERC20 public immutable PAYOUT_TOKEN;
-
   /// @notice The default protocol fee that can be applied to pools created by `FACTORY`.
   ///
   /// It is the denominator of the fraction of the swapper fees that are collected by the Uni v3
@@ -146,11 +131,8 @@ contract V3FeeManager {
   /// 0.3% / 5 = 0.06% of the transaction.
   uint8 public globalProtocolFee;
 
-  /// @notice The raw amount of the payout token which is paid by a user when claiming pool fees.
-  uint256 public payoutAmount;
-
   /// @notice The contract that receives the payout when pool fees are claimed.
-  address public immutable PAYOUT_RECEIVER;
+  address public immutable FEE_RECEIVER;
 
   /// @notice The address that can call privileged methods, including passthrough owner functions
   /// to the factory itself.
@@ -161,27 +143,20 @@ contract V3FeeManager {
 
   /// @param _admin The initial admin address for this deployment. Cannot be zero address.
   /// @param _factory The v3 factory instance for which this deployment will serve as owner.
-  /// @param _payoutToken The ERC-20 token in which payouts will be denominated.
-  /// @param _payoutAmount The initial raw amount of the payout token required
-  /// to claim fees from a pool. Must be greater than zero.
   /// @param _globalProtocolFee The initial global protocol fee to be set on all
   /// pools created by the factory, `_factory`. Must be 0 or 4-10 inclusive.
-  /// @param _payoutReceiver The contract that will receive the payout when fees are claimed.
+  /// @param _feeReceiver The contract that will receive the fees when claimed.
   constructor(
     address _admin,
     IUniswapV3FactoryOwnerActions _factory,
-    IERC20 _payoutToken,
-    uint256 _payoutAmount,
     uint8 _globalProtocolFee,
-    address _payoutReceiver
+    address _feeReceiver
   ) {
     _setAdmin(_admin);
-    _setPayoutAmount(_payoutAmount);
     _setGlobalProtocolFee(_globalProtocolFee);
 
     FACTORY = _factory;
-    PAYOUT_TOKEN = _payoutToken;
-    PAYOUT_RECEIVER = _payoutReceiver;
+    FEE_RECEIVER = _feeReceiver;
   }
 
   /// @notice Pass the admin role to a new address. Must be called by the existing admin.
@@ -219,13 +194,6 @@ contract V3FeeManager {
       _pools[_i].setFeeProtocol(globalProtocolFee, globalProtocolFee);
       emit FeeProtocolOverrideRemoved(_pools[_i]);
     }
-  }
-
-  /// @notice Update the payout amount to a new value. Must be called by admin.
-  /// @param _newPayoutAmount The value that will be the new payout amount.
-  function setPayoutAmount(uint256 _newPayoutAmount) external {
-    _revertIfNotAdmin();
-    _setPayoutAmount(_newPayoutAmount);
   }
 
   /// @notice Set the global protocol fee for all pools created by the factory.
@@ -275,40 +243,30 @@ contract V3FeeManager {
   }
 
   /// @notice Public method that allows any caller to claim the protocol fees accrued by multiple
-  /// Uniswap v3 pool contracts. Caller must pre-approve this factory owner contract on the payout
-  /// token contract for at least the payout amount, which is transferred from the caller to the
-  /// payout receiver. The protocol fees collected are sent to a receiver of the caller's
-  /// specification.
+  /// Uniswap v3 pool contract. The protocol fees collected are sent to the fee receiver. The fee
+  /// receiver will be the `ERC20FeeCollector` which has a payout race to convert fees to a payout
+  /// token. `claimFees` should be called by MEV searchers in the payout race flow.
   ///
   /// A quick example can help illustrate why an external party, such as an MEV searcher, would be
   /// incentivized to call this method. Imagine, purely for the sake of example, that protocol fees
   /// have been activated for the USDC/USDT stablecoin v3 pool. Imagine also the payout token and
-  /// payout amount are WETH and 10e18 respectively. Finally, assume the spot USD price of ETH is
-  /// $2,500, and both stablecoins are trading at their $1 peg. As regular users trade against the
-  /// USDC/USDT pool, protocol fees amass in the pool contract in both stablecoins. Once the fees
-  /// in the pool total more than 25,000 in stablecoins, it becomes profitable for an external
-  /// party to arbitrage the fees by calling this method, paying 10 WETH (worth $25K) and getting
-  /// more than $25K worth of stablecoins. (This ignores other details, which real searchers would
-  /// take into consideration, such as the gas/builder fee they would pay to call the method).
+  /// payout amount on the `ERC20FeeCollector` are WETH and 10e18 respectively. Finally, assume the
+  /// spot USD price of ETH is $2,500, and both stablecoins are trading at their $1 peg. As regular
+  /// users trade against the USDC/USDT pool, protocol fees amass in the pool contract in both
+  /// stablecoins. Once the fees in the pool total more than 25,000 in stablecoins, it becomes
+  /// profitable for an external party to arbitrage the fees by calling this method and then
+  /// `claimFees` on the `ERC20FeeCollector`, paying 10 WETH (worth $25K) and getting more than
+  /// $25K worth of stablecoins. (This ignores other details, which real searchers would take into
+  /// consideration, such as the gas/builder fee they would pay to call the method).
   /// Effectively, as each pool accrues fees, it eventually becomes possible to "buy" the pool fees
   /// for less than they are valued by "paying" the the payout amount of the payout token.
   ///
   /// The same mechanic can be extended to include multiple pools at once. When a searcher notices
   /// that the sum of the protocol fees in multiple pools is greater than the payout amount, they
   /// can call this method to claim the fees from all of the pools in a single transaction.
-  ///
-  /// `payoutAmount` may be changed by the admin (governance). Any proposal that changes this amount
-  /// is expected to be subject to the governance process, including a timelocked execution, and so
-  /// it's unlikely that a caller would be surprised by a change in this value. Still, callers
-  /// should be aware of the edge case where:
-  /// 1. The caller grants a higher-than-necessary payout token approval to this factory.
-  /// 2. caller's claimFee transaction is in the mempool.
-  /// 3. the payoutAmount is changed.
-  /// 4. the claimFee transaction is now included in a block.
   /// @param _claimInputs The array of claim input data. Each element contains
   /// the following:
   /// - `pool`: The Uniswap v3 pool from which protocol fees are collected.
-  /// - `recipient`: The address to which collected protocol fees will be sent.
   /// - `amount0Requested`: The amount of the pool's token0 to forward to the pool's collectProtocol
   ///   function. Its maximum value will be `protocolFees.token0 - 1`. Requesting more than the
   ///   maximum value will revert.
@@ -332,8 +290,6 @@ contract V3FeeManager {
     if (_claimInputs.length == 0) revert V3FeeManager__NoClaimInputProvided();
     _claimOutputs = new ClaimOutputData[](_claimInputs.length);
 
-    PAYOUT_TOKEN.safeTransferFrom(msg.sender, PAYOUT_RECEIVER, payoutAmount);
-
     for (uint256 _i = 0; _i < _claimInputs.length; _i++) {
       ClaimInputData calldata _input = _claimInputs[_i];
       _claimOutputs[_i] = _claimFees(_input);
@@ -345,13 +301,6 @@ contract V3FeeManager {
     if (_newAdmin == address(0)) revert V3FeeManager__InvalidAddress();
     emit AdminSet(admin, _newAdmin);
     admin = _newAdmin;
-  }
-
-  /// @notice Internal function to change the payout amount.
-  function _setPayoutAmount(uint256 _newPayoutAmount) internal {
-    if (_newPayoutAmount == 0) revert V3FeeManager__InvalidPayoutAmount();
-    emit PayoutAmountSet(payoutAmount, _newPayoutAmount);
-    payoutAmount = _newPayoutAmount;
   }
 
   /// @notice Internal function to change the global protocol fee. Supported values are limited to
@@ -373,9 +322,8 @@ contract V3FeeManager {
     returns (ClaimOutputData memory _output)
   {
     _output.pool = _input.pool;
-    (_output.amount0, _output.amount1) = _input.pool.collectProtocol(
-      _input.recipient, _input.amount0Requested, _input.amount1Requested
-    );
+    (_output.amount0, _output.amount1) =
+      _input.pool.collectProtocol(FEE_RECEIVER, _input.amount0Requested, _input.amount1Requested);
 
     // Protect the caller from receiving less than requested. See `collectProtocol` for context.
     if (_output.amount0 < _input.amount0Requested || _output.amount1 < _input.amount1Requested) {
@@ -383,11 +331,11 @@ contract V3FeeManager {
     }
 
     emit FeesClaimed(
-      address(_input.pool), msg.sender, _input.recipient, _output.amount0, _output.amount1
+      address(_input.pool), msg.sender, FEE_RECEIVER, _output.amount0, _output.amount1
     );
   }
 
-  /// @notice Ensures the msg.sender is the contract admin and reverts otherwise.
+  /// @notice Ensures the `msg.sender` is the contract admin and reverts otherwise.
   /// @dev Place inside external methods to make them admin-only.
   function _revertIfNotAdmin() internal view {
     if (msg.sender != admin) revert V3FeeManager__Unauthorized();
