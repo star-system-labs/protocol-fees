@@ -5,11 +5,11 @@ pragma solidity ^0.8.23;
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {Script} from "forge-std/Script.sol";
 
-import {DeployOwnerInput} from "script/DeployOwnerInput.sol";
+import {DeployFeeManagerInput} from "script/DeployFeeManagerInput.sol";
 import {V3FeeManager} from "src/V3FeeManager.sol";
 import {IUniswapV3FactoryOwnerActions} from "src/interfaces/IUniswapV3FactoryOwnerActions.sol";
 
-contract DeployOwner is Script, DeployOwnerInput {
+contract DeployFeeManager is Script, DeployFeeManagerInput {
   uint256 deployerPrivateKey;
 
   function setUp() public {
@@ -27,19 +27,8 @@ contract DeployOwner is Script, DeployOwnerInput {
       UNISWAP_GOVERNOR_TIMELOCK,
       IUniswapV3FactoryOwnerActions(UNISWAP_V3_FACTORY_ADDRESS),
       INITIAL_GLOBAL_PROTOCOL_FEE_DENOMINATOR,
-      UNISTAKER_ADDRESS
+      REWARD_RECEIVER
     );
-
-    // TODO Governance will need to change the owner of the
-    // UNISWAP_V3_FACTORY_ADDRESS so that v3FeeManager is the new owner.
-
-    // TODO Governance will need to add a new rewardNotifier to Unistaker via
-    // Unistaker.setRewardNotifier (either v3FeeManager or whatever address is
-    // going to pool rewards).
-
-    // TODO Governance will need to disable the old owner as a UniStaker reward
-    // notifier.
-    // UniStaker.setRewardNotifier(address(_oldV3FeeManager), false);
 
     vm.stopBroadcast();
 
