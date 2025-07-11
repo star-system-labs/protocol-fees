@@ -11,7 +11,7 @@ contract AssetSink {
   using CurrencyLibrary for Currency;
 
   /// @notice Emitted when asset fees are successfully claimed
-  /// @param asset Address of the currency that was claimed
+  /// @param asset Address of the asset that was claimed
   /// @param recipient Address that received the assets
   /// @param amount Amount of fees transferred to the recipient
   event FeesClaimed(Currency indexed asset, address indexed recipient, uint256 amount);
