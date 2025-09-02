@@ -47,7 +47,7 @@ contract ExchangeReleaser is FirepitImmutable, Nonce {
   /// @param _nonce A unique nonce to prevent replay attacks
   /// @param assets An array of Currency tokens to be released from the AssetSink
   /// @param recipient The address that will receive the released assets
-  function torch(uint256 _nonce, Currency[] memory assets, address recipient)
+  function release(uint256 _nonce, Currency[] memory assets, address recipient)
     external
     handleNonce(_nonce)
   {

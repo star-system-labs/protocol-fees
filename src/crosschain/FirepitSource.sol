@@ -27,7 +27,7 @@ abstract contract FirepitSource is FirepitImmutable, Nonce {
 
   /// @notice Torches the RESOURCE by sending it to the burn address and sends a cross-domain
   /// message to release the assets
-  function torch(uint256 _nonce, Currency[] memory assets, address claimer, uint32 l2GasLimit)
+  function release(uint256 _nonce, Currency[] memory assets, address claimer, uint32 l2GasLimit)
     external
     handleNonce(_nonce)
   {
