@@ -1,0 +1,109 @@
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.29;
+
+import {Owned} from "solmate/src/auth/Owned.sol";
+import {IUNI} from "./interfaces/IUNI.sol";
+
+/// @title UNIMinter
+/// @notice A smart contract that manages the minting rights for UNI token, enabling proportional
+/// distribution to multiple recipients
+/// @dev This contract holds the minter role and allows annual minting with configurable share
+/// allocations
+/// @author Uniswap
+contract UNIMinter is Owned {
+  /// @notice Thrown when attempting to revoke shares before the delay period has elapsed
+  error RevocationNotReady();
+  /// @notice Thrown when attempting to revoke shares that don't have a pending revocation
+  error NotPendingRevocation();
+  /// @notice Thrown when granting shares would exceed the maximum allowed
+  error InsufficientShares();
+
+  /// @notice Structure to hold recipient share information
+  /// @param recipient The address that will receive minted UNI tokens
+  /// @param amount The number of shares allocated to this recipient (out of MAX_SHARES)
+  /// @param pendingRevocationTime The timestamp when revocation can be completed, or 0 if not
+  /// pending
+  struct Share {
+    address recipient;
+    uint16 amount;
+    uint48 pendingRevocationTime;
+  }
+
+  /// @notice The delay period for revoking shares (180 days)
+  /// @dev Provides recipients advance notice before their allocation is revoked
+  uint48 REVOCATION_DELAY = 180 days;
+
+  /// @notice The mint cap in percentage terms (2% annual inflation)
+  uint16 private constant MINT_CAP = 2;
+
+  /// @notice The total number of shares representing 100% of mintable tokens
+  /// @dev Unallocated shares result in reduced inflation
+  uint16 private constant MAX_SHARES = 10_000;
+
+  /// @notice The UNI token contract address on mainnet
+  IUNI public constant UNI = IUNI(0x1f9840a85d5aF5bf1D1762F925BDADdC4201F984);
+
+  /// @notice Total number of currently allocated shares
+  /// @dev Always less than or equal to MAX_SHARES
+  uint16 public totalShares;
+
+  /// @notice Array containing all active share allocations
+  /// @dev Iterate through this array to distribute minted tokens
+  Share[] public shares;
+
+  /// @notice Creates a new UNIMinter instance
+  /// @param _owner The initial admin address (UNI DAO) that can manage share allocations
+  constructor(address _owner) Owned(_owner) {}
+
+  /// @notice Executes the annual mint and distributes tokens proportionally to share holders
+  /// @dev Can be called by anyone once per year. Mints based on allocated shares only, unallocated
+  /// shares reduce inflation
+  function mint() external {
+    uint256 mintCap = UNI.totalSupply() * MINT_CAP / 100;
+    uint256 mintAmount = mintCap * totalShares / MAX_SHARES;
+    UNI.mint(address(this), mintAmount);
+
+    // Distribute to recipients based on their shares
+    for (uint256 i = 0; i < shares.length; i++) {
+      Share memory share = shares[i];
+
+      uint256 recipientAmount = mintAmount * share.amount / MAX_SHARES;
+      if (recipientAmount > 0) UNI.transfer(share.recipient, recipientAmount);
+    }
+  }
+
+  /// @notice Grants shares of the UNI inflation to a recipient
+  /// @dev Only callable by owner (UNI DAO). Reverts if total shares would exceed MAX_SHARES
+  /// @param _recipient The address that will receive the minted UNI tokens
+  /// @param _amount The number of shares to allocate (out of MAX_SHARES total)
+  function grantShares(address _recipient, uint16 _amount) external onlyOwner {
+    if (totalShares + _amount > MAX_SHARES) revert InsufficientShares();
+    shares.push(Share({recipient: _recipient, amount: _amount, pendingRevocationTime: 0}));
+    totalShares += _amount;
+  }
+
+  /// @notice Initiates the revocation process for a recipient's shares
+  /// @dev Only callable by owner. Sets a timestamp after which revocation can be completed
+  /// @param _index The index in the shares array of the allocation to revoke
+  function initiateRevokeShares(uint256 _index) external onlyOwner {
+    Share storage share = shares[_index];
+    share.pendingRevocationTime = uint48(block.timestamp) + REVOCATION_DELAY;
+  }
+
+  /// @notice Completes the revocation of shares after the delay period
+  /// @dev Can be called by anyone after the revocation delay has passed. Removes the share
+  /// allocation entirely
+  /// @param _index The index in the shares array of the allocation to revoke
+  function revokeShares(uint256 _index) external {
+    Share memory share = shares[_index];
+    uint48 pendingRevocationTime = share.pendingRevocationTime;
+    if (pendingRevocationTime == 0) revert NotPendingRevocation();
+    if (block.timestamp < pendingRevocationTime) revert RevocationNotReady();
+
+    totalShares -= share.amount;
+
+    // Remove the share by swapping with the last and popping
+    shares[_index] = shares[shares.length - 1];
+    shares.pop();
+  }
+}
