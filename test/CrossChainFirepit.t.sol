@@ -26,7 +26,9 @@ contract CrossChainFirepitTest is PhoenixTestBase {
 
     vm.startPrank(alice);
     resource.approve(address(opStackFirepitSource), INITIAL_TOKEN_AMOUNT);
-    opStackFirepitSource.release(opStackFirepitSource.nonce(), releaseMockToken, alice, L2_GAS_LIMIT);
+    opStackFirepitSource.release(
+      opStackFirepitSource.nonce(), releaseMockToken, alice, L2_GAS_LIMIT
+    );
     vm.stopPrank();
 
     assertEq(mockToken.balanceOf(alice), INITIAL_TOKEN_AMOUNT);
