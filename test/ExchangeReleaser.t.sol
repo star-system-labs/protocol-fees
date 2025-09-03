@@ -13,12 +13,7 @@ contract ExchangeReleaserTest is PhoenixTestBase {
   function setUp() public override {
     super.setUp();
     swapReleaser = new ExchangeReleaser(
-      address(owner),
-      address(owner),
-      address(resource),
-      INITIAL_TOKEN_AMOUNT,
-      address(assetSink),
-      recipient
+      address(owner), address(resource), INITIAL_TOKEN_AMOUNT, address(assetSink), recipient
     );
 
     vm.prank(owner);

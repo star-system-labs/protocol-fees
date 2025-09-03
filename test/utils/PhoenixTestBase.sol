@@ -73,7 +73,6 @@ contract PhoenixTestBase is Test {
     firepitDestination = new FirepitDestination(owner, address(assetSink));
     opStackFirepitSource = new OPStackFirepitSource(
       owner,
-      owner,
       address(resource),
       INITIAL_TOKEN_AMOUNT,
       address(mockCrossDomainMessenger),

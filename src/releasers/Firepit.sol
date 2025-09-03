@@ -12,5 +12,5 @@ contract Firepit is ExchangeReleaser {
     address _resource,
     uint256 _threshold,
     address _assetSink
-  ) ExchangeReleaser(_owner, _thresholdSetter, _resource, _threshold, _assetSink, address(0)) {}
+  ) ExchangeReleaser(_owner, _resource, _threshold, _assetSink, address(0)) {}
 }
