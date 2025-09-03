@@ -17,6 +17,8 @@ contract UNIMinter is Owned {
   error NotPendingRevocation();
   /// @notice Thrown when granting shares would exceed the maximum allowed
   error InsufficientShares();
+  /// @notice Thrown when atempting to mint with no configured shares
+  error NoShares();
 
   /// @notice Structure to hold recipient share information
   /// @param recipient The address that will receive minted UNI tokens
@@ -31,10 +33,10 @@ contract UNIMinter is Owned {
 
   /// @notice The delay period for revoking shares (180 days)
   /// @dev Provides recipients advance notice before their allocation is revoked
-  uint48 REVOCATION_DELAY = 180 days;
+  uint48 private constant REVOCATION_DELAY = 180 days;
 
   /// @notice The mint cap in percentage terms (2% annual inflation)
-  uint16 private constant MINT_CAP = 2;
+  uint16 private constant MINT_CAP_PERCENT = 2;
 
   /// @notice The total number of shares representing 100% of mintable tokens
   /// @dev Unallocated shares result in reduced inflation
@@ -59,7 +61,8 @@ contract UNIMinter is Owned {
   /// @dev Can be called by anyone once per year. Mints based on allocated shares only, unallocated
   /// shares reduce inflation
   function mint() external {
-    uint256 mintCap = UNI.totalSupply() * MINT_CAP / 100;
+    if (totalShares == 0) revert NoShares();
+    uint256 mintCap = UNI.totalSupply() * MINT_CAP_PERCENT / 100;
     uint256 mintAmount = mintCap * totalShares / MAX_SHARES;
     UNI.mint(address(this), mintAmount);
 
