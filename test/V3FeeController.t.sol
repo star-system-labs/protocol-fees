@@ -28,6 +28,8 @@ contract V3FeeControllerTest is PhoenixTestBase {
   PoolObject poolObject0;
   PoolObject poolObject1;
 
+  address feeSetter;
+
   struct ProtocolFees {
     uint128 token0;
     uint128 token1;
@@ -52,6 +54,8 @@ contract V3FeeControllerTest is PhoenixTestBase {
     /// Transfer ownership to the fee controller.
     vm.prank(factory.owner());
     factory.setOwner(address(feeController));
+
+    feeSetter = feeController.feeSetter();
 
     // Create pool.
     pool = factory.createPool(address(mockToken), address(mockToken1), 3000);
@@ -140,7 +144,7 @@ contract V3FeeControllerTest is PhoenixTestBase {
 
   function test_setMerkleRoot_success() public {
     assertEq(feeController.merkleRoot(), bytes32(uint256(0)));
-    vm.prank(owner);
+    vm.prank(feeSetter);
     feeController.setMerkleRoot(bytes32(uint256(40)));
 
     assertEq(feeController.merkleRoot(), bytes32(uint256(40)));
@@ -148,13 +152,13 @@ contract V3FeeControllerTest is PhoenixTestBase {
 
   function test_setMerkleRoot_success_fuzz(bytes32 merkleRoot) public {
     assertEq(feeController.merkleRoot(), bytes32(uint256(0)));
-    vm.prank(owner);
+    vm.prank(feeSetter);
     feeController.setMerkleRoot(merkleRoot);
     assertEq(feeController.merkleRoot(), merkleRoot);
   }
 
   function test_setMerkleRoot_revertsWithInvalidProof() public {
-    vm.prank(owner);
+    vm.prank(feeSetter);
     feeController.setMerkleRoot(bytes32(uint256(40)));
 
     vm.expectRevert(V3FeeController.InvalidProof.selector);
@@ -178,7 +182,7 @@ contract V3FeeControllerTest is PhoenixTestBase {
     bytes32 merkleRoot = merkle.getRoot(leaves);
 
     // Set the merkle root
-    vm.startPrank(owner);
+    vm.startPrank(feeSetter);
     feeController.setMerkleRoot(merkleRoot);
     feeController.setDefaultFeeByFeeTier(poolObject0.fee, poolObject0.protocolFee);
     vm.stopPrank();
@@ -206,7 +210,7 @@ contract V3FeeControllerTest is PhoenixTestBase {
 
     bytes32 merkleRoot = merkle.getRoot(leaves);
 
-    vm.startPrank(owner);
+    vm.startPrank(feeSetter);
     feeController.setMerkleRoot(merkleRoot);
     feeController.setDefaultFeeByFeeTier(poolObject1.fee, poolObject1.protocolFee);
     vm.stopPrank();
@@ -240,7 +244,7 @@ contract V3FeeControllerTest is PhoenixTestBase {
 
     bytes32 merkleRoot = merkle.getRoot(leaves);
 
-    vm.startPrank(owner);
+    vm.startPrank(feeSetter);
     feeController.setMerkleRoot(merkleRoot);
     feeController.setDefaultFeeByFeeTier(poolObject0.fee, poolObject0.protocolFee);
     feeController.setDefaultFeeByFeeTier(poolObject1.fee, poolObject1.protocolFee);
@@ -282,7 +286,7 @@ contract V3FeeControllerTest is PhoenixTestBase {
 
     bytes32 merkleRoot = merkle.getRoot(leaves);
 
-    vm.prank(owner);
+    vm.prank(feeSetter);
     feeController.setMerkleRoot(merkleRoot);
 
     bytes32[] memory proof = merkle.getProof(leaves, 0);
@@ -329,7 +333,7 @@ contract V3FeeControllerTest is PhoenixTestBase {
   }
 
   function test_setDefaultFeeByFeeTier_revertsWithInvalidFeeTier() public {
-    vm.prank(owner);
+    vm.prank(feeSetter);
     vm.expectRevert(V3FeeController.InvalidFeeTier.selector);
     feeController.setDefaultFeeByFeeTier(11_000, 10);
   }
