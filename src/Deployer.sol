@@ -53,6 +53,7 @@ contract Deployer {
       new V3FeeController{salt: FEE_CONTROLLER_SALT}(address(V3_FACTORY), address(assetSink));
 
     /// 9. Update the feeSetter to the owner.
+    feeController.setFeeSetter(owner);
 
     /// 10. Update the owner on the fee controller.
     feeController.transferOwnership(owner);
