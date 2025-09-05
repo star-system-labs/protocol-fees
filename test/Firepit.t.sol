@@ -2,8 +2,10 @@
 pragma solidity ^0.8.29;
 
 import {PhoenixTestBase} from "./utils/PhoenixTestBase.sol";
+import {Currency} from "v4-core/types/Currency.sol";
 import {CurrencyLibrary} from "v4-core/types/Currency.sol";
 import {Nonce} from "../src/base/Nonce.sol";
+import {Firepit} from "../src/releasers/Firepit.sol";
 
 contract FirepitTest is PhoenixTestBase {
   function setUp() public override {
@@ -136,5 +138,17 @@ contract FirepitTest is PhoenixTestBase {
     assertEq(resource.balanceOf(alice), 0);
     assertEq(resource.balanceOf(address(firepit)), 0);
     assertEq(resource.balanceOf(address(0xdead)), firepit.threshold());
+  }
+
+  function test_revert_release_tooManyAssets() public {
+    Currency[] memory assets = new Currency[](21);
+    for (uint256 i = 0; i < 21; i++) {
+      assets[i] = Currency.wrap(address(mockToken));
+    }
+
+    uint256 nonce = firepit.nonce();
+
+    vm.expectRevert(Firepit.TooManyAssets.selector);
+    firepit.release(nonce, assets, alice);
   }
 }

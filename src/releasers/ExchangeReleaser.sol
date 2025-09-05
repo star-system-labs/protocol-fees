@@ -13,7 +13,7 @@ import {Nonce} from "../base/Nonce.sol";
 /// amount of a resource token
 /// @dev Inherits from ResourceManager for resource transferring functionality and Nonce for replay
 /// protection
-contract ExchangeReleaser is ResourceManager, Nonce {
+abstract contract ExchangeReleaser is ResourceManager, Nonce {
   using SafeTransferLib for ERC20;
 
   /// @notice The AssetSink contract from which assets will be released
@@ -35,8 +35,14 @@ contract ExchangeReleaser is ResourceManager, Nonce {
   /// @param _nonce A unique nonce to prevent replay attacks
   /// @param assets An array of Currency tokens to be released from the AssetSink
   /// @param recipient The address that will receive the released assets
-  function release(uint256 _nonce, Currency[] memory assets, address recipient)
-    external
+  function release(uint256 _nonce, Currency[] memory assets, address recipient) external virtual {
+    _release(_nonce, assets, recipient);
+  }
+
+  /// @notice Internal function to handle the nonce check, transfer the RESOURCE, and call the
+  /// release of assets on the AssetSink.
+  function _release(uint256 _nonce, Currency[] memory assets, address recipient)
+    internal
     handleNonce(_nonce)
   {
     RESOURCE.safeTransferFrom(msg.sender, RESOURCE_RECIPIENT, threshold);
