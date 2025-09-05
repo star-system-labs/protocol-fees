@@ -12,9 +12,9 @@ contract Deployer {
   IUniswapV3Factory public constant V3_FACTORY =
     IUniswapV3Factory(0x1F98431c8aD98523631AE4a59f267346ea31F984);
 
-  bytes32 ASSET_SINK_SALT = 0;
-  bytes32 RELEASER_SALT = 0;
-  bytes32 FEE_CONTROLLER_SALT = 0;
+  bytes32 SALT_ASSET_SINK = 0;
+  bytes32 SALT_RELEASER = 0;
+  bytes32 SALT_FEE_CONTROLLER = 0;
 
   AssetSink public assetSink;
   Firepit public releaser;
@@ -27,8 +27,8 @@ contract Deployer {
 
   /// RELEASER:
   /// 2. Deploy the Releaser.
-  /// 6. Update the owner on the releaser.
   /// 5. Update the thresholdSetter on the releaser to the owner.
+  /// 6. Update the owner on the releaser.
 
   /// FEE_CONTROLLER:
   /// 7. Deploy the FeeController.
@@ -37,9 +37,9 @@ contract Deployer {
   constructor() {
     address owner = V3_FACTORY.owner();
     /// 1. Deploy the AssetSink.
-    assetSink = new AssetSink{salt: ASSET_SINK_SALT}();
+    assetSink = new AssetSink{salt: SALT_ASSET_SINK}();
     /// 2. Deploy the Releaser.
-    releaser = new Firepit{salt: RELEASER_SALT}(RESOURCE, THRESHOLD, address(assetSink));
+    releaser = new Firepit{salt: SALT_RELEASER}(RESOURCE, THRESHOLD, address(assetSink));
     /// 3. Set the releaser on the asset sink.
     assetSink.setReleaser(address(releaser));
     /// 4. Update the owner on the asset sink.
@@ -52,7 +52,7 @@ contract Deployer {
 
     /// 7. Deploy the FeeController.
     feeController =
-      new V3FeeController{salt: FEE_CONTROLLER_SALT}(address(V3_FACTORY), address(assetSink));
+      new V3FeeController{salt: SALT_FEE_CONTROLLER}(address(V3_FACTORY), address(assetSink));
 
     /// 8. Update the feeSetter to the owner.
     feeController.setFeeSetter(owner);
