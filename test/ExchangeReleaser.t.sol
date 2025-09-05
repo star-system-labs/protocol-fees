@@ -17,6 +17,7 @@ contract ExchangeReleaserTest is PhoenixTestBase {
     swapReleaser = new ExchangeReleaser(address(resource), address(assetSink), recipient);
 
     assetSink.setReleaser(address(swapReleaser));
+    swapReleaser.setThresholdSetter(owner);
     swapReleaser.setThreshold(INITIAL_TOKEN_AMOUNT);
     vm.stopPrank();
   }

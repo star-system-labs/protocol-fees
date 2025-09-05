@@ -65,10 +65,13 @@ contract PhoenixTestBase is Test {
     revertingToken = new RevertingToken("RevertingToken", "RTK", 18);
     oogToken = new OOGToken("OOGToken", "OOGT", 18);
     revertBombToken = new RevertBombToken("RevertBombToken", "RBT", 18);
-    assetSink = new AssetSink(owner);
 
     vm.startPrank(owner);
+    assetSink = new AssetSink();
     firepit = new Firepit(address(resource), address(assetSink));
+    assetSink.setReleaser(address(firepit));
+
+    firepit.setThresholdSetter(owner);
     firepit.setThreshold(INITIAL_TOKEN_AMOUNT);
 
     firepitDestination = new FirepitDestination(owner, address(assetSink));
@@ -76,7 +79,7 @@ contract PhoenixTestBase is Test {
     opStackFirepitSource = new OPStackFirepitSource(
       address(resource), address(mockCrossDomainMessenger), address(firepitDestination)
     );
-
+    opStackFirepitSource.setThresholdSetter(owner);
     opStackFirepitSource.setThreshold(INITIAL_TOKEN_AMOUNT);
 
     revertingToken.setRevertFrom(address(assetSink), true);

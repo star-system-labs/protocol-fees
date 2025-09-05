@@ -7,9 +7,10 @@ import {Firepit} from "./releasers/Firepit.sol";
 import {IUniswapV3Factory} from "v3-core/contracts/interfaces/IUniswapV3Factory.sol";
 
 contract Deployer {
-  address RESOURCE;
-  uint256 THRESHOLD;
-  IUniswapV3Factory V3_FACTORY;
+  address public constant RESOURCE = 0x0000000000000000000000000000000000000000;
+  uint256 public constant THRESHOLD = 0;
+  IUniswapV3Factory public constant V3_FACTORY =
+    IUniswapV3Factory(0x1F98431c8aD98523631AE4a59f267346ea31F984);
 
   bytes32 ASSET_SINK_SALT = 0;
   bytes32 RELEASER_SALT = 0;
