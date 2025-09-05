@@ -3,7 +3,6 @@ pragma solidity ^0.8.29;
 
 import {Owned} from "solmate/src/auth/Owned.sol";
 import {ERC20} from "solmate/src/utils/SafeTransferLib.sol";
-import {AssetSink} from "../AssetSink.sol";
 import {IResourceManager} from "../interfaces/IReleaser.sol";
 
 /// @title ResourceManager

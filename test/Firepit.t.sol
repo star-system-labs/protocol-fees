@@ -4,7 +4,7 @@ pragma solidity ^0.8.29;
 import {PhoenixTestBase} from "./utils/PhoenixTestBase.sol";
 import {Currency} from "v4-core/types/Currency.sol";
 import {CurrencyLibrary} from "v4-core/types/Currency.sol";
-import {Nonce, INonce} from "../src/base/Nonce.sol";
+import {INonce} from "../src/interfaces/base/INonce.sol";
 import {IOwned} from "../src/interfaces/base/IOwned.sol";
 import {Firepit} from "../src/releasers/Firepit.sol";
 
@@ -52,7 +52,8 @@ contract FirepitTest is PhoenixTestBase {
 
     // alice spends some of her resources
     vm.prank(alice);
-    resource.transfer(address(0), amount);
+    bool success = resource.transfer(address(0), amount);
+    assertTrue(success);
 
     assertLt(resource.balanceOf(alice), firepit.threshold());
 
