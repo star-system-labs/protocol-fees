@@ -79,7 +79,7 @@ contract V3FeeController is IV3FeeController, Owned {
 
   /// @inheritdoc IV3FeeController
   function triggerFeeUpdate(address pool, bytes32[] calldata proof) external {
-    bytes32 node = _hash(pool);
+    bytes32 node = _doubleHash(pool);
     if (!MerkleProof.verify(proof, merkleRoot, node)) revert InvalidProof();
 
     _setProtocolFee(pool);
@@ -100,7 +100,7 @@ contract V3FeeController is IV3FeeController, Owned {
     address pool;
     for (uint256 i; i < pools.length; i++) {
       pool = pools[i];
-      leaves[i] = _hash(pool);
+      leaves[i] = _doubleHash(pool);
       _setProtocolFee(pool);
     }
     if (!MerkleProof.multiProofVerify(proof, proofFlags, merkleRoot, leaves)) revert InvalidProof();
@@ -111,7 +111,7 @@ contract V3FeeController is IV3FeeController, Owned {
     IUniswapV3PoolOwnerActions(pool).setFeeProtocol(feeValue % 16, feeValue >> 4);
   }
 
-  function _hash(address pool) internal pure returns (bytes32 poolHash) {
+  function _doubleHash(address pool) internal pure returns (bytes32 poolHash) {
     // keccak256(abi.encode(keccak256(abi.encode(pool))));
     assembly ("memory-safe") {
       mstore(0x00, and(pool, 0xffffffffffffffffffffffffffffffffffffffff))

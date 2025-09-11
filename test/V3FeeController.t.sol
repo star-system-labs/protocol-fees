@@ -433,6 +433,6 @@ contract V3FeeControllerTest is PhoenixTestBase {
   }
 
   function _hashLeaf(address _pool) internal pure returns (bytes32) {
-    return keccak256(abi.encodePacked(keccak256(abi.encode(_pool))));
+    return keccak256(abi.encode(keccak256(abi.encode(_pool))));
   }
 }
