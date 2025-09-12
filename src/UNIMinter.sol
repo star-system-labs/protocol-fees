@@ -61,6 +61,8 @@ contract UNIMinter is Owned {
   /// @notice Executes the annual mint and distributes tokens proportionally to share holders
   /// @dev Can be called by anyone once per year. Mints based on allocated shares only, unallocated
   /// shares reduce inflation
+  /// @dev The underlying UNI token contract reverts if called with > 2% of total supply
+  //    or if < 365 days since the last
   function mint() external {
     if (totalShares == 0) revert NoShares();
     uint256 mintCap = UNI.totalSupply() * MINT_CAP_PERCENT / 100;
@@ -68,10 +70,11 @@ contract UNIMinter is Owned {
     UNI.mint(address(this), mintAmount);
 
     // Distribute to recipients based on their shares
-    for (uint256 i = 0; i < shares.length; i++) {
-      Share memory share = shares[i];
-
-      uint256 recipientAmount = mintAmount * share.amount / MAX_SHARES;
+    Share memory share;
+    uint256 recipientAmount;
+    for (uint256 i; i < shares.length; i++) {
+      share = shares[i];
+      recipientAmount = mintAmount * share.amount / MAX_SHARES;
       if (recipientAmount > 0) UNI.transfer(share.recipient, recipientAmount);
     }
   }
@@ -111,6 +114,7 @@ contract UNIMinter is Owned {
   ///   - If revocation completes before next mint: share is entirely removed
   ///   - If revocation extends into next mint period: share amount is reduced proportionally
   ///     to time remaining until revocation (e.g., 90 days into 365-day period = ~25% of shares)
+  ///   - revokeShares must be called to update amounts for pending revocation
   /// @param _index The index in the shares array of the allocation to revoke or update
   function revokeShares(uint256 _index) external {
     Share storage share = shares[_index];
@@ -141,5 +145,14 @@ contract UNIMinter is Owned {
       // Revocation is not ready yet
       revert RevocationNotReady();
     }
+  }
+
+  /// @notice Transfers the UNI minter role to a new address
+  /// @dev Only callable by owner. This is a critical operation that permanently transfers
+  ///      the ability to mint UNI tokens to the new address. Once transferred, this contract
+  ///      will no longer be able to mint UNI tokens unless the role is transferred back.
+  /// @param _minter The address of the new minter contract or EOA
+  function setMinter(address _minter) external onlyOwner {
+    UNI.setMinter(_minter);
   }
 }
