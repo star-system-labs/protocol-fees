@@ -60,6 +60,11 @@ interface IV3FeeController {
   /// @param tickSpacing The corresponding tick spacing for the new fee tier.
   function enableFeeAmount(uint24 newFeeTier, int24 tickSpacing) external;
 
+  /// @notice Sets the owner of the Uniswap V3 Factory.
+  /// @dev Only callable by `owner`
+  /// @param newOwner The new owner of the Uniswap V3 Factory.
+  function setFactoryOwner(address newOwner) external;
+
   /// @notice Collects protocol fees from the specified pools to the designated `ASSET_SINK`
   /// @param collectParams Array of collection parameters for each pool.
   /// @return amountsCollected Array of collected amounts for each pool.

@@ -48,6 +48,10 @@ contract V3FeeController is IV3FeeController, Owned {
     FACTORY.enableFeeAmount(fee, tickSpacing);
   }
 
+  function setFactoryOwner(address newOwner) external onlyOwner {
+    FACTORY.setOwner(newOwner);
+  }
+
   /// @inheritdoc IV3FeeController
   function collect(CollectParams[] calldata collectParams)
     external
