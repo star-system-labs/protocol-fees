@@ -53,7 +53,7 @@ contract V3FeeController is IV3FeeController, Owned {
   }
 
   /// @inheritdoc IV3FeeController
-  function storeFeeTier(uint24 feeTier) external {
+  function storeFeeTier(uint24 feeTier) public {
     require(_feeTierExists(feeTier), InvalidFeeTier());
     require(!feeTiers.includes(feeTier), TierAlreadyStored());
     feeTiers.push(feeTier);
@@ -63,7 +63,7 @@ contract V3FeeController is IV3FeeController, Owned {
   function enableFeeAmount(uint24 fee, int24 tickSpacing) external onlyOwner {
     FACTORY.enableFeeAmount(fee, tickSpacing);
 
-    feeTiers.push(fee);
+    storeFeeTier(fee);
   }
 
   /// @inheritdoc IV3FeeController
