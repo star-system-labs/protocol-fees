@@ -1,11 +1,14 @@
 # Firepit
-[Git Source](https://github.com/Uniswap/phoenix-fees/blob/5ad4b18e2825646f5b8057eb618759de00281b9a/src/releasers/Firepit.sol)
+[Git Source](https://github.com/Uniswap/phoenix-fees/blob/8538dfe0c6b5788456432221d4719ef9bd91225a/src/releasers/Firepit.sol)
 
 **Inherits:**
 [ExchangeReleaser](/technical-reference/abstract.ExchangeReleaser)
 
 An ExchangeReleaser with recipient set to the burn address address(0xdead) and a limit
 on the number of currencies that can be released at any time.
+
+**Note:**
+security-contact: security@uniswap.org
 
 
 ## State Variables

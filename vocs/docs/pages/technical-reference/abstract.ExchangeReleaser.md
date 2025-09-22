@@ -1,5 +1,5 @@
 # ExchangeReleaser
-[Git Source](https://github.com/Uniswap/phoenix-fees/blob/5ad4b18e2825646f5b8057eb618759de00281b9a/src/releasers/ExchangeReleaser.sol)
+[Git Source](https://github.com/Uniswap/phoenix-fees/blob/8538dfe0c6b5788456432221d4719ef9bd91225a/src/releasers/ExchangeReleaser.sol)
 
 **Inherits:**
 [IReleaser](/technical-reference/interface.IReleaser), [ResourceManager](/technical-reference/abstract.ResourceManager), [Nonce](/technical-reference/abstract.Nonce)
@@ -10,6 +10,9 @@ amount of a resource token
 
 *Inherits from ResourceManager for resource transferring functionality and Nonce for replay
 protection*
+
+**Note:**
+security-contact: security@uniswap.org
 
 
 ## State Variables

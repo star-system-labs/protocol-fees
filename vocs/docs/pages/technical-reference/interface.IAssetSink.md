@@ -1,5 +1,5 @@
 # IAssetSink
-[Git Source](https://github.com/Uniswap/phoenix-fees/blob/5ad4b18e2825646f5b8057eb618759de00281b9a/src/interfaces/IAssetSink.sol)
+[Git Source](https://github.com/Uniswap/phoenix-fees/blob/8538dfe0c6b5788456432221d4719ef9bd91225a/src/interfaces/IAssetSink.sol)
 
 The interface for releasing assets from the contract
 
@@ -17,7 +17,7 @@ function releaser() external view returns (address);
 
 |Name|Type|Description|
 |----|----|-----------|
-|`<none>`|`address`|Address of the current IReleaser|
+|`_null_`|`address`|Address of the current IReleaser|
 
 
 ### setReleaser
@@ -41,23 +41,6 @@ Release assets to a specified recipient
 ```solidity
 function release(Currency[] calldata assets, address recipient) external;
 ```
-
-## Events
-### FeesClaimed
-Emitted when asset fees are successfully claimed
-
-
-```solidity
-event FeesClaimed(Currency indexed asset, address indexed recipient, uint256 amount);
-```
-
-**Parameters**
-
-|Name|Type|Description|
-|----|----|-----------|
-|`asset`|`Currency`|Address of the asset that was claimed|
-|`recipient`|`address`|Address that received the assets|
-|`amount`|`uint256`|Amount of fees transferred to the recipient|
 
 ## Errors
 ### Unauthorized

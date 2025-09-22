@@ -1,5 +1,5 @@
 # IUniswapV3FactoryOwnerActions
-[Git Source](https://github.com/Uniswap/phoenix-fees/blob/5ad4b18e2825646f5b8057eb618759de00281b9a/src/interfaces/IUniswapV3FactoryOwnerActions.sol)
+[Git Source](https://github.com/Uniswap/phoenix-fees/blob/8538dfe0c6b5788456432221d4719ef9bd91225a/src/interfaces/IUniswapV3FactoryOwnerActions.sol)
 
 The Uniswap V3 Factory facilitates creation of Uniswap V3 pools and control over the
 protocol fees
@@ -23,7 +23,7 @@ function owner() external view returns (address);
 
 |Name|Type|Description|
 |----|----|-----------|
-|`<none>`|`address`|The address of the factory owner|
+|`_null_`|`address`|The address of the factory owner|
 
 
 ### setOwner
@@ -82,6 +82,6 @@ function feeAmountTickSpacing(uint24 fee) external view returns (int24);
 
 |Name|Type|Description|
 |----|----|-----------|
-|`<none>`|`int24`|The tick spacing|
+|`_null_`|`int24`|The tick spacing|
 
 

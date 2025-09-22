@@ -1,5 +1,5 @@
 # FirepitDestination
-[Git Source](https://github.com/Uniswap/phoenix-fees/blob/5ad4b18e2825646f5b8057eb618759de00281b9a/src/crosschain/FirepitDestination.sol)
+[Git Source](https://github.com/Uniswap/phoenix-fees/blob/8538dfe0c6b5788456432221d4719ef9bd91225a/src/crosschain/FirepitDestination.sol)
 
 **Inherits:**
 [Nonce](/technical-reference/abstract.Nonce), Owned

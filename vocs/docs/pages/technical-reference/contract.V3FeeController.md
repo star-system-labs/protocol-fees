@@ -1,5 +1,5 @@
 # V3FeeController
-[Git Source](https://github.com/Uniswap/phoenix-fees/blob/5ad4b18e2825646f5b8057eb618759de00281b9a/src/feeControllers/V3FeeController.sol)
+[Git Source](https://github.com/Uniswap/phoenix-fees/blob/8538dfe0c6b5788456432221d4719ef9bd91225a/src/feeControllers/V3FeeController.sol)
 
 **Inherits:**
 [IV3FeeController](/technical-reference/interface.IV3FeeController), Owned
@@ -10,6 +10,9 @@ new fee tiers to the Uniswap V3 Factory.
 *This contract is ownable. The owner can set the merkle root for proving protocol fee
 amounts per pool, set new fee tiers on Uniswap V3, and change the owner of this contract.
 Note that this contract will be the set owner on the Uniswap V3 Factory.*
+
+**Note:**
+security-contact: security@uniswap.org
 
 
 ## State Variables
@@ -141,7 +144,7 @@ function setDefaultFeeByFeeTier(uint24 feeTier, uint8 defaultFeeValue) external 
 |Name|Type|Description|
 |----|----|-----------|
 |`feeTier`|`uint24`|The fee tier, expressed in pips, to set the default fee for.|
-|`defaultFeeValue`|`uint8`|The default fee value to set, expressed as the denominator on the inclusive interval [4, 10]. The fee value is packed (token1Fee << 4 | token0Fee)|
+|`defaultFeeValue`|`uint8`|The default fee value to set, expressed as the denominator on the inclusive interval [4, 10]. The fee value is packed (token1Fee \<\< 4 | token0Fee)|
 
 
 ### triggerFeeUpdate

@@ -23,4 +23,30 @@ else
   done
 fi
 
+# use sed to replace `<none>` with `_null_` in all .md files in ./docs/pages/technical-reference
+if sed --version >/dev/null 2>&1; then
+  # GNU sed
+  find ./docs/pages/technical-reference -type f -name "*.md" -print0 | while IFS= read -r -d '' file; do
+    sed -i -e 's/<none>/_null_/g' "$file"
+  done
+else
+  # BSD sed (macOS)
+  find ./docs/pages/technical-reference -type f -name "*.md" -print0 | while IFS= read -r -d '' file; do
+    sed -i '' -e 's/<none>/_null_/g' "$file"
+  done
+fi
+
+# use sed to replace < with \< in all .md files in ./docs/pages/technical-reference
+if sed --version >/dev/null 2>&1; then
+  # GNU sed
+  find ./docs/pages/technical-reference -type f -name "*.md" -print0 | while IFS= read -r -d '' file; do
+    sed -i -e 's/</\\</g' "$file"
+  done
+else
+  # BSD sed (macOS)
+  find ./docs/pages/technical-reference -type f -name "*.md" -print0 | while IFS= read -r -d '' file; do
+    sed -i '' -e 's/</\\</g' "$file"
+  done
+fi
+
 rm -rf ../forge-docs
