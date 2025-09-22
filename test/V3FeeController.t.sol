@@ -205,6 +205,44 @@ contract V3FeeControllerTest is PhoenixTestBase {
     assertEq(poolFees, poolObject0.protocolFee);
   }
 
+  function test_triggerFeeUpdate_byPair_withValidMerkleProof() public {
+    uint8 fee0 = 5;
+    uint8 fee1 = 10;
+    poolObject0.protocolFee = fee1 << 4 | fee0;
+
+    poolObject1.protocolFee = 4 << 4 | 8;
+
+    // Generate leaf nodes.
+    address dummyPool = poolObject1.pool;
+    bytes32 targetLeaf = _hashLeaf(poolObject0.pool);
+    bytes32 dummyLeaf = _hashLeaf(dummyPool);
+
+    bytes32[] memory leaves = new bytes32[](2);
+    leaves[0] = targetLeaf;
+    leaves[1] = dummyLeaf;
+
+    bytes32 merkleRoot = merkle.getRoot(leaves);
+
+    // Set the merkle root
+    vm.startPrank(feeSetter);
+    feeController.setMerkleRoot(merkleRoot);
+    feeController.setDefaultFeeByFeeTier(poolObject0.fee, poolObject0.protocolFee); // 0.30% pool
+    feeController.setDefaultFeeByFeeTier(poolObject1.fee, poolObject1.protocolFee); // 1.00% pool
+    vm.stopPrank();
+
+    bytes32[] memory proof = merkle.getProof(leaves, 0);
+
+    (address _token0, address _token1) = address(mockToken) < address(mockToken1)
+      ? (address(mockToken), address(mockToken1))
+      : (address(mockToken1), address(mockToken));
+    feeController.triggerFeeUpdate(_token0, _token1, proof);
+
+    (,,,,, uint8 poolFees,) = IUniswapV3Pool(poolObject0.pool).slot0();
+    assertEq(poolFees, poolObject0.protocolFee);
+    (,,,,, uint8 protocolFees1,) = IUniswapV3Pool(poolObject1.pool).slot0();
+    assertEq(protocolFees1, poolObject1.protocolFee);
+  }
+
   function test_triggerFeeUpdate_withValidMerkleProof_differentPool() public {
     uint8 protocolFee2 = 5;
 
