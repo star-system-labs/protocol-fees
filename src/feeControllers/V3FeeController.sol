@@ -135,7 +135,8 @@ contract V3FeeController is IV3FeeController, Owned {
   function _setProtocolFeesForPair(address token0, address token1) internal {
     uint24 feeTier;
     address pool;
-    for (uint256 i; i < feeTiers.length; i++) {
+    uint256 length = feeTiers.length;
+    for (uint256 i; i < length; i++) {
       feeTier = feeTiers[i];
       pool = FACTORY.getPool(token0, token1, feeTier);
       if (pool != address(0)) _setProtocolFee(pool, feeTier);
