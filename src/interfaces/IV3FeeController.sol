@@ -61,6 +61,9 @@ interface IV3FeeController {
   /// @return The authorized address to set fees-by-fee-tier AND the merkle root
   function feeSetter() external view returns (address);
 
+  /// @return The fee tiers enabled on the factory
+  function feeTiers(uint256 i) external view returns (uint24);
+
   /// @notice Stores a fee tier.
   /// @param feeTier The fee tier to store.
   /// @dev Must be a fee tier that exists on the Uniswap V3 Factory.

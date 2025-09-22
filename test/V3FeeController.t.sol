@@ -91,6 +91,15 @@ contract V3FeeControllerTest is PhoenixTestBase {
     assertEq(feeController.ASSET_SINK(), address(assetSink));
   }
 
+  function test_enableFeeAmount() public {
+    uint24 newTier = 750;
+    vm.prank(owner);
+    feeController.enableFeeAmount(750, 1);
+
+    uint24 _tier = feeController.feeTiers(3);
+    assertEq(_tier, newTier);
+  }
+
   function test_collect_full_success() public {
     uint128 amount0 = 10e18;
     uint128 amount1 = 11e18;
