@@ -364,6 +364,13 @@ contract V3FeeControllerTest is PhoenixTestBase {
     assertEq(factory.owner(), newOwner);
   }
 
+  function test_setFactoryOwner_reverts(address caller) public {
+    vm.assume(caller != owner);
+    vm.prank(caller);
+    vm.expectRevert("UNAUTHORIZED");
+    feeController.setFactoryOwner(address(0));
+  }
+
   function test_fuzz_triggerFeeUpdate_revertsInvalidProtocolFee(address invalidPool) public {
     vm.assume(invalidPool != pool);
 
