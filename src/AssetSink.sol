@@ -8,7 +8,7 @@ import {IAssetSink} from "./interfaces/IAssetSink.sol";
 /// @title AssetSink
 /// @notice Sink for protocol fees
 /// @dev Fees accumulate passively in this contract from external sources.
-///      Stored fees can be released by authorized releaser contracts.
+///      Stored fees can be released by an authorized releaser contract.
 /// @custom:security-contact security@uniswap.org
 contract AssetSink is Owned, IAssetSink {
   /// @inheritdoc IAssetSink
@@ -20,7 +20,9 @@ contract AssetSink is Owned, IAssetSink {
     _;
   }
 
-  /// @notice Creates a new AssetSink with the specified releaser
+  /// @dev creates an asset sink where the deployer is the initial owner
+  /// during deployment, the deployer SHOULD set the releaser address and
+  /// transfer ownership
   constructor() Owned(msg.sender) {}
 
   /// @inheritdoc IAssetSink
