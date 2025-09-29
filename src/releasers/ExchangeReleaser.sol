@@ -33,13 +33,13 @@ abstract contract ExchangeReleaser is IReleaser, ResourceManager, Nonce {
   }
 
   /// @inheritdoc IReleaser
-  function release(uint256 _nonce, Currency[] memory assets, address recipient) external virtual {
+  function release(uint256 _nonce, Currency[] calldata assets, address recipient) external virtual {
     _release(_nonce, assets, recipient);
   }
 
   /// @notice Internal function to handle the nonce check, transfer the RESOURCE, and call the
   /// release of assets on the AssetSink.
-  function _release(uint256 _nonce, Currency[] memory assets, address recipient)
+  function _release(uint256 _nonce, Currency[] calldata assets, address recipient)
     internal
     handleNonce(_nonce)
   {

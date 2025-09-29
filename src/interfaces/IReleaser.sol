@@ -15,5 +15,5 @@ interface IReleaser is IResourceManager, INonce {
   /// @param assets The list of assets (addresses) to release, which may have length limits
   /// Native tokens (Ether) are represented as the zero address
   /// @param recipient The address to receive the released assets, paid out by Asset Sink
-  function release(uint256 _nonce, Currency[] memory assets, address recipient) external;
+  function release(uint256 _nonce, Currency[] calldata assets, address recipient) external;
 }

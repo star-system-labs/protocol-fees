@@ -32,9 +32,9 @@ contract V4FeeController is Owned {
   /// @param amountRequested The amount of each currency to request.
   /// @param amountExpected The amount of each currency that is expected to be collected.
   function collect(
-    Currency[] memory currency,
-    uint256[] memory amountRequested,
-    uint256[] memory amountExpected
+    Currency[] calldata currency,
+    uint256[] calldata amountRequested,
+    uint256[] calldata amountExpected
   ) external {
     uint256 amountCollected;
     for (uint256 i = 0; i < currency.length; i++) {
@@ -63,7 +63,7 @@ contract V4FeeController is Owned {
   function triggerFeeUpdate(
     PoolKey calldata _poolKey,
     uint24 newProtocolFee,
-    bytes32[] memory proof
+    bytes32[] calldata proof
   ) external {
     bytes32 node = keccak256(abi.encode(_poolKey, newProtocolFee));
     require(MerkleProof.verify(proof, merkleRoot, node), InvalidProof());
