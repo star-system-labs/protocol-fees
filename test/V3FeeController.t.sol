@@ -471,6 +471,20 @@ contract V3FeeControllerTest is PhoenixTestBase {
     feeController.setFeeSetter(newFeeSetter);
   }
 
+  function test_setFactoryOwner() public {
+    address newOwner = makeAddr("newOwner");
+    vm.prank(owner);
+    feeController.setFactoryOwner(newOwner);
+    assertEq(factory.owner(), newOwner);
+  }
+
+  function test_setFactoryOwner_reverts(address caller) public {
+    vm.assume(caller != owner);
+    vm.prank(caller);
+    vm.expectRevert("UNAUTHORIZED");
+    feeController.setFactoryOwner(address(0));
+  }
+
   function test_fuzz_setDefaultFeeByFeeTier(uint24 feeTier, uint8 defaultFee) public {
     vm.startPrank(feeController.feeSetter());
     if (factory.feeAmountTickSpacing(feeTier) == 0) {

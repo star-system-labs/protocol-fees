@@ -8,18 +8,21 @@ import {IAssetSink} from "./interfaces/IAssetSink.sol";
 /// @title AssetSink
 /// @notice Sink for protocol fees
 /// @dev Fees accumulate passively in this contract from external sources.
-///      Stored fees can be released by authorized releaser contracts.
+///      Stored fees can be released by an authorized releaser contract.
+/// @custom:security-contact security@uniswap.org
 contract AssetSink is Owned, IAssetSink {
   /// @inheritdoc IAssetSink
   address public releaser;
 
   /// @notice Ensures only the releaser can call the release function
   modifier onlyReleaser() {
-    if (msg.sender != releaser) revert Unauthorized();
+    require(msg.sender == releaser, Unauthorized());
     _;
   }
 
-  /// @notice Creates a new AssetSink with the specified releaser
+  /// @dev creates an asset sink where the deployer is the initial owner
+  /// during deployment, the deployer SHOULD set the releaser address and
+  /// transfer ownership
   constructor() Owned(msg.sender) {}
 
   /// @inheritdoc IAssetSink
@@ -29,10 +32,7 @@ contract AssetSink is Owned, IAssetSink {
     for (uint256 i; i < assets.length; i++) {
       asset = assets[i];
       amount = asset.balanceOfSelf();
-      if (amount > 0) {
-        asset.transfer(recipient, amount);
-        emit FeesClaimed(asset, recipient, amount);
-      }
+      if (amount > 0) asset.transfer(recipient, amount);
     }
   }
 

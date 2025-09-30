@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.0;
+pragma solidity ^0.8.29;
 
 import {Owned} from "solmate/src/auth/Owned.sol";
 import {IUniswapV3Pool} from "v3-core/contracts/interfaces/IUniswapV3Pool.sol";
@@ -16,6 +16,7 @@ import {ArrayLib} from "../libraries/ArrayLib.sol";
 /// @dev This contract is ownable. The owner can set the merkle root for proving protocol fee
 /// amounts per pool, set new fee tiers on Uniswap V3, and change the owner of this contract.
 /// Note that this contract will be the set owner on the Uniswap V3 Factory.
+/// @custom:security-contact security@uniswap.org
 contract V3FeeController is IV3FeeController, Owned {
   using ArrayLib for uint24[];
 
@@ -42,7 +43,7 @@ contract V3FeeController is IV3FeeController, Owned {
   /// @notice Ensures only the fee setter can call the setMerkleRoot and setDefaultFeeByFeeTier
   /// functions
   modifier onlyFeeSetter() {
-    if (msg.sender != feeSetter) revert Unauthorized();
+    require(msg.sender == feeSetter, Unauthorized());
     _;
   }
 
@@ -64,6 +65,10 @@ contract V3FeeController is IV3FeeController, Owned {
     FACTORY.enableFeeAmount(fee, tickSpacing);
 
     storeFeeTier(fee);
+  }
+
+  function setFactoryOwner(address newOwner) external onlyOwner {
+    FACTORY.setOwner(newOwner);
   }
 
   /// @inheritdoc IV3FeeController
@@ -129,7 +134,7 @@ contract V3FeeController is IV3FeeController, Owned {
       leaves[i] = _doubleHash(pair.token0, pair.token1);
       _setProtocolFeesForPair(pair.token0, pair.token1);
     }
-    if (!MerkleProof.multiProofVerify(proof, proofFlags, merkleRoot, leaves)) revert InvalidProof();
+    require(MerkleProof.multiProofVerify(proof, proofFlags, merkleRoot, leaves), InvalidProof());
   }
 
   function _setProtocolFeesForPair(address token0, address token1) internal {
