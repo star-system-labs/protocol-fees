@@ -3,9 +3,9 @@ pragma solidity ^0.8.29;
 
 import {IUNI} from "./IUNI.sol";
 
-/// @title IUniVesting
-/// @notice Interface for the UniVesting contract
-interface IUniVesting {
+/// @title IUNIVesting
+/// @notice Interface for the UNIVesting contract
+interface IUNIVesting {
   /// @notice Thrown when the minting timestamp has not been updated, but a vesting window is being
   /// started.
   error MintingWindowClosed();
