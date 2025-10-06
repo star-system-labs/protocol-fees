@@ -68,7 +68,7 @@ function collectAndRelease(
 
 ## UNI Approvals
 
-As noted in [System Permissions](/system-permissions), the Phoenix system allows for an *updatable* [`Firepit.threshold()`](/technical-reference/IResourceManager#threshold)
+The Phoenix system allows for an *updatable* [`Firepit.threshold()`](/technical-reference/IResourceManager#threshold)
 
 While the system does not intend to maliciously front-run `.release()` calls, max-approving UNI allowances may lead to an unexpectedly higher burn of UNI.
 The risk only appears if and only if the `thresholdSetter` increases the `threshold` amount while there is a pending `.release()` call.
