@@ -1,9 +1,11 @@
+// SPDX-License-Identifier: MIT
 pragma solidity ^0.8.29;
 
 import {SafeCast} from "openzeppelin-contracts/contracts/utils/math/SafeCast.sol";
 
 /// @title VestingLib
 /// @notice Library for vesting calculations
+/// @custom:security-contact security@uniswap.org
 library VestingLib {
   /// if b is negative: a - (-b)
   /// otherwise: a - b

@@ -5,41 +5,42 @@ import {IUNI} from "./interfaces/IUNI.sol";
 import {SafeCast} from "openzeppelin-contracts/contracts/utils/math/SafeCast.sol";
 import {Owned} from "solmate/src/auth/Owned.sol";
 import {VestingLib} from "./libraries/VestingLib.sol";
-import {IUniVesting} from "./interfaces/IUniVesting.sol";
+import {IUNIVesting} from "./interfaces/IUNIVesting.sol";
 
-/// @title UniVesting
+/// @title UNIVesting
 /// @notice A contract for vesting UNI tokens over configurable time periods
 /// @dev This contract allows for the vesting of UNI tokens with periodic claiming
 /// functionality. It integrates with the UNI token's minting schedule to coordinate
 /// vesting windows with minting cycles.
-contract UniVesting is IUniVesting, Owned {
+/// @custom:security-contact security@uniswap.org
+contract UNIVesting is IUNIVesting, Owned {
   using VestingLib for *;
 
-  /// @inheritdoc IUniVesting
+  /// @inheritdoc IUNIVesting
   IUNI public immutable UNI;
 
-  /// @inheritdoc IUniVesting
+  /// @inheritdoc IUNIVesting
   uint256 public immutable periodDuration;
 
-  /// @inheritdoc IUniVesting
+  /// @inheritdoc IUNIVesting
   uint256 public immutable totalVestingPeriod;
 
-  /// @inheritdoc IUniVesting
+  /// @inheritdoc IUNIVesting
   uint256 public immutable totalPeriods;
 
-  /// @inheritdoc IUniVesting
+  /// @inheritdoc IUNIVesting
   uint256 public mintingAllowedAfterCheckpoint;
 
-  /// @inheritdoc IUniVesting
+  /// @inheritdoc IUNIVesting
   uint256 public amountVesting;
 
-  /// @inheritdoc IUniVesting
+  /// @inheritdoc IUNIVesting
   uint256 public startTime;
 
-  /// @inheritdoc IUniVesting
+  /// @inheritdoc IUNIVesting
   int256 public claimed;
 
-  /// @notice Constructs a new UniVesting contract
+  /// @notice Constructs a new UNIVesting contract
   /// @param _uni The address of the UNI token contract
   /// @param _periodDuration The duration of each vesting period in seconds (e.g., 30 days)
   constructor(address _uni, uint256 _periodDuration) Owned(msg.sender) {
@@ -50,7 +51,7 @@ contract UniVesting is IUniVesting, Owned {
     mintingAllowedAfterCheckpoint = UNI.mintingAllowedAfter();
   }
 
-  /// @inheritdoc IUniVesting
+  /// @inheritdoc IUNIVesting
   function start() external {
     require(UNI.mintingAllowedAfter() > mintingAllowedAfterCheckpoint, MintingWindowClosed());
     require(totalVested() == amountVesting, ActiveVestingWindow());
@@ -69,19 +70,19 @@ contract UniVesting is IUniVesting, Owned {
     mintingAllowedAfterCheckpoint = UNI.mintingAllowedAfter();
   }
 
-  /// @inheritdoc IUniVesting
-  function claim(address recipient) public onlyOwner {
+  /// @inheritdoc IUNIVesting
+  function claim(address recipient) external onlyOwner {
     uint256 _claimable = claimable();
     claimed = claimed.add(_claimable);
     UNI.transfer(recipient, _claimable);
   }
 
-  /// @inheritdoc IUniVesting
+  /// @inheritdoc IUNIVesting
   function claimable() public view returns (uint256) {
     return totalVested().sub(claimed);
   }
 
-  /// @inheritdoc IUniVesting
+  /// @inheritdoc IUNIVesting
   function totalVested() public view returns (uint256) {
     if (block.timestamp < startTime) return 0;
     if (block.timestamp >= startTime + totalVestingPeriod) return amountVesting;

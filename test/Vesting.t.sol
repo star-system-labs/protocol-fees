@@ -4,13 +4,13 @@ import {Test} from "forge-std/Test.sol";
 import {MockERC20} from "solmate/src/test/utils/mocks/MockERC20.sol";
 import {SafeCast} from "openzeppelin-contracts/contracts/utils/math/SafeCast.sol";
 import {Owned} from "solmate/src/auth/Owned.sol";
-import {UniVesting} from "../src/UniVesting.sol";
-import {IUniVesting} from "../src/interfaces/IUniVesting.sol";
+import {UNIVesting} from "../src/UNIVesting.sol";
+import {IUNIVesting} from "../src/interfaces/IUNIVesting.sol";
 import {IUNI} from "../src/interfaces/IUNI.sol";
 
 contract VestingTest is Test {
   MockERC20 public vestingToken;
-  IUniVesting public vesting;
+  IUNIVesting public vesting;
 
   uint256 public constant INITIAL_TOKEN_AMOUNT = 1000e18;
 
@@ -32,12 +32,12 @@ contract VestingTest is Test {
       abi.encode(365 days)
     );
 
-    vesting = new UniVesting(address(vestingToken), 30 days);
+    vesting = new UNIVesting(address(vestingToken), 30 days);
     Owned(address(vesting)).transferOwnership(owner);
   }
 
   function test_start_reverts_whenMintingWindowNotChanged() public {
-    vm.expectRevert(IUniVesting.MintingWindowClosed.selector);
+    vm.expectRevert(IUNIVesting.MintingWindowClosed.selector);
     vesting.start();
   }
 
