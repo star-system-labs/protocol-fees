@@ -10,12 +10,8 @@ export default defineConfig({
       link: '/overview',
     },
     {
-      text: 'Getting Started',
-      link: '/getting-started',
-    },
-    {
-      text: 'System Permissions',
-      link: '/system-permissions',
+      text: 'Implementation Process',
+      link: '/implementation-process',
     },
     {
       text: "Guides",

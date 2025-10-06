@@ -1,0 +1,19 @@
+# Implementation Process
+
+To enable fees for v2 and v3 on mainnet, the following steps must be taken:
+
+- Deploy V3FeeController, AssetSink, and Firepit:
+  - Firepit should be deployed first
+  - AssetSink should be deployed next, with the releaser parameter set to the Firepit’s address
+  - V3FeeController should be deployed last, with the destination parameter set to the AssetSink’s address
+
+- Configure Governance parameters:
+  - call `setThresholdSetter` on the Firepit and pass it the [Uniswap Governance Timelock’s address](https://etherscan.io/address/0x1a9c8182c09f50c8318d769245bea52c32be35bc)
+  - call `setOwner` on the Firepit and pass it the [Uniswap Governance Timelock’s address](https://etherscan.io/address/0x1a9c8182c09f50c8318d769245bea52c32be35bc)
+  - call `setFeeSetter` on the V3FeeController and pass it the [Uniswap Governance Timelock’s address](https://etherscan.io/address/0x1a9c8182c09f50c8318d769245bea52c32be35bc)
+  - call `setOwner` on the V3FeeController and pass it the [Uniswap Governance Timelock’s address](https://etherscan.io/address/0x1a9c8182c09f50c8318d769245bea52c32be35bc)
+  - call `setOwner` on the AssetSink and pass it the [Uniswap Governance Timelock’s address](https://etherscan.io/address/0x1a9c8182c09f50c8318d769245bea52c32be35bc)
+- Propose a Uniswap Governance vote that:
+  - Calls [`setFeeTo`](https://github.com/Uniswap/v2-core/blob/ee547b17853e71ed4e0101ccfd52e70d5acded58/contracts/UniswapV2Factory.sol#L40) on the mainnet [UniswapV2Factory](https://etherscan.io/address/0x5c69bee701ef814a2b6a3edd4b1652cb9cc5aa6f) and passes the AssetSink address as the parameter
+  - Calls [`setowner`](https://github.com/Uniswap/v3-core/blob/d8b1c635c275d2a9450bd6a78f3fa2484fef73eb/contracts/UniswapV3Factory.sol#L54) on the mainnet [UniswapV3Factory](https://etherscan.io/address/0x1f98431c8ad98523631ae4a59f267346ea31f984) address and passes it the v3FeeController’s address as the parameter
+  - Calls [`setMerkleRoot`](https://github.com/Uniswap/phoenix-fees/blob/6f39580d36a75a1ed1f34daf7d3262ced4b9df3f/src/feeControllers/V3FeeController.sol#L93C12-L93C25) on the V3FeeController contract and passes a properly constructed Merkle root as a parameter
