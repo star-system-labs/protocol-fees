@@ -93,7 +93,10 @@ contract PhoenixForkTest is Test {
   function test_collectFeeV3() public {
     test_enableFeeV3();
 
-    // swap on 5 bip pool
+    // swap on the 5 bip pool
+    deal(USDC, address(this), 1000e6);
+    _exactInSwapV3(pool1, true, 1000e6);
+
     // swap on 30 bip pool
     // swap on 1% pool
 
@@ -120,7 +123,40 @@ contract PhoenixForkTest is Test {
     test_enableFeeV2();
   }
 
+  // --- Helpers ---
+
+  function _exactInSwapV3(address pool, bool zeroForOne, uint256 amountIn) internal {
+    IUniswapV3Pool(pool).swap(
+      address(this),
+      zeroForOne,
+      int256(amountIn),
+      // constants grabbed from v3-core TickMath, pasted here to avoid type conversion in new
+      // solidity version
+      zeroForOne
+        ? 4_295_128_739 + 1
+        : 1_461_446_703_485_210_103_287_273_052_203_988_822_378_723_970_342 - 1,
+      abi.encode(address(this)) // encode the payer
+    );
+  }
+
   function _hashLeaf(address token0, address token1) internal pure returns (bytes32) {
     return keccak256(abi.encode(keccak256(abi.encode(token0, token1))));
+  }
+
+  function uniswapV3SwapCallback(int256 amount0Delta, int256 amount1Delta, bytes calldata data)
+    external
+  {
+    address user = abi.decode(data, (address));
+    if (amount0Delta > 0) {
+      IERC20 token = IERC20(IUniswapV3Pool(msg.sender).token0());
+      vm.prank(user);
+      token.approve(address(this), uint256(amount0Delta));
+      token.transferFrom(user, msg.sender, uint256(amount0Delta));
+    } else if (amount1Delta > 0) {
+      IERC20 token = IERC20(IUniswapV3Pool(msg.sender).token1());
+      vm.prank(user);
+      token.approve(address(this), uint256(amount1Delta));
+      token.transferFrom(user, msg.sender, uint256(amount1Delta));
+    }
   }
 }
