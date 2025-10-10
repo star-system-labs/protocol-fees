@@ -1170,6 +1170,7 @@ contract UNIMinterTest is Test {
     assertEq(adjusted, true);
 
     // Cannot re-initiate revocation on something already adjusted
+    vm.prank(owner);
     vm.expectRevert(IUNIMinter.InvalidRevocation.selector);
     uniMinter.initiateRevokeShares(0);
   }
