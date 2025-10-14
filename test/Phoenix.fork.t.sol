@@ -142,27 +142,38 @@ contract PhoenixForkTest is Test {
     assertEq(IERC20(USDC).balanceOf(address(assetSink)), 0);
     assertEq(IERC20(WETH).balanceOf(address(assetSink)), 0);
     feeController.collect(params);
-    
+
     // asset sink has collected all fees
     // subtract 3 wei because the v3 pool always leaves 1 wei behind
-    assertEq(IERC20(USDC).balanceOf(address(assetSink)), token0Pool1 + token0Pool2 + token0Pool3 - 3 wei);
-    assertEq(IERC20(WETH).balanceOf(address(assetSink)), token1Pool1 + token1Pool2 + token1Pool3 - 3 wei);
+    assertEq(
+      IERC20(USDC).balanceOf(address(assetSink)), token0Pool1 + token0Pool2 + token0Pool3 - 3 wei
+    );
+    assertEq(
+      IERC20(WETH).balanceOf(address(assetSink)), token1Pool1 + token1Pool2 + token1Pool3 - 3 wei
+    );
   }
 
   function test_releaseV3(address caller, address recipient) public {
+    vm.assume(caller != address(0));
+    vm.assume(recipient != address(0));
     test_collectFeeV3();
 
+    // give the caller some UNI to burn
     deal(deployer.RESOURCE(), address(caller), releaser.threshold());
     assertEq(IERC20(deployer.RESOURCE()).balanceOf(address(caller)), releaser.threshold());
 
+    uint256 balance0Before = IERC20(USDC).balanceOf(recipient);
+    uint256 balance1Before = IERC20(WETH).balanceOf(recipient);
+
+    uint256 balance0AssetSinkBefore = IERC20(USDC).balanceOf(address(assetSink));
+    uint256 balance1AssetSinkBefore = IERC20(WETH).balanceOf(address(assetSink));
+
+    // release the assets
     uint256 _nonce = releaser.nonce();
     Currency[] memory currencies = new Currency[](2);
     currencies[0] = Currency.wrap(USDC);
     currencies[1] = Currency.wrap(WETH);
-    
-    uint256 balance0Before = IERC20(USDC).balanceOf(recipient);
-    uint256 balance1Before = IERC20(WETH).balanceOf(recipient);
-    
+
     vm.startPrank(caller);
     IERC20(deployer.RESOURCE()).approve(address(releaser), releaser.threshold());
     releaser.release(_nonce, currencies, recipient);
@@ -170,8 +181,8 @@ contract PhoenixForkTest is Test {
 
     assertEq(IERC20(USDC).balanceOf(address(assetSink)), 0);
     assertEq(IERC20(WETH).balanceOf(address(assetSink)), 0);
-    assertEq(IERC20(USDC).balanceOf(recipient) - balance0Before, 0);
-    assertEq(IERC20(WETH).balanceOf(recipient) - balance1Before, 0);
+    assertEq(IERC20(USDC).balanceOf(recipient) - balance0Before, balance0AssetSinkBefore);
+    assertEq(IERC20(WETH).balanceOf(recipient) - balance1Before, balance1AssetSinkBefore);
   }
 
   function test_releaseV2V3() public {
