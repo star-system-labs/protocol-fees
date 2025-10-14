@@ -64,6 +64,10 @@ contract PhoenixForkTest is Test {
     vm.prank(owner);
     factory.setOwner(address(feeController));
 
+    // assumes governance timelock takes back control of the feeSetter
+    vm.prank(owner);
+    IFeeToSetter(0x18e433c7Bf8A2E1d0197CE5d8f9AFAda1A771360).setFeeToSetter(owner);
+
     pool0 = factory.getPool(WETH, USDC, 100); // 1 bip pool
     pool1 = factory.getPool(WETH, USDC, 500); // 5 bip pool
     pool2 = factory.getPool(WETH, USDC, 3000); // 30 bip pool
@@ -111,9 +115,8 @@ contract PhoenixForkTest is Test {
   }
 
   function test_enableFeeV2() public {
-    // TODO: deployer should fix / replace the time delayer
-    // assertEq(v2Factory.feeToSetter(), owner);
-    vm.prank(v2Factory.feeToSetter());
+    assertEq(v2Factory.feeToSetter(), owner);
+    vm.prank(owner);
     v2Factory.setFeeTo(address(assetSink));
     assertEq(v2Factory.feeTo(), address(assetSink));
   }
@@ -310,4 +313,11 @@ contract PhoenixForkTest is Test {
     path[1] = zeroForOne ? _pair.token1() : _pair.token0();
     v2Router.swapExactTokensForTokens(amountIn, 0, path, address(this), block.timestamp);
   }
+}
+
+// interface for:
+// https://etherscan.io/address/0x18e433c7Bf8A2E1d0197CE5d8f9AFAda1A771360#code
+// the current v2Factory.feeToSetter()
+interface IFeeToSetter {
+  function setFeeToSetter(address) external;
 }
