@@ -176,19 +176,13 @@ contract PhoenixForkTest is Test {
 
     IV3FeeController.CollectParams[] memory params = new IV3FeeController.CollectParams[](3);
     params[0] = IV3FeeController.CollectParams({
-      pool: pool1,
-      amount0Requested: type(uint128).max,
-      amount1Requested: type(uint128).max
+      pool: pool1, amount0Requested: type(uint128).max, amount1Requested: type(uint128).max
     });
     params[1] = IV3FeeController.CollectParams({
-      pool: pool2,
-      amount0Requested: type(uint128).max,
-      amount1Requested: type(uint128).max
+      pool: pool2, amount0Requested: type(uint128).max, amount1Requested: type(uint128).max
     });
     params[2] = IV3FeeController.CollectParams({
-      pool: pool3,
-      amount0Requested: type(uint128).max,
-      amount1Requested: type(uint128).max
+      pool: pool3, amount0Requested: type(uint128).max, amount1Requested: type(uint128).max
     });
 
     // asset sink has no tokens
@@ -277,17 +271,18 @@ contract PhoenixForkTest is Test {
   }
 
   function _exactInSwapV3(address pool, bool zeroForOne, uint256 amountIn) internal {
-    IUniswapV3Pool(pool).swap(
-      address(this),
-      zeroForOne,
-      int256(amountIn),
-      // constants grabbed from v3-core TickMath, pasted here to avoid type conversion in new
-      // solidity version
-      zeroForOne
-        ? 4_295_128_739 + 1
-        : 1_461_446_703_485_210_103_287_273_052_203_988_822_378_723_970_342 - 1,
-      abi.encode(address(this)) // encode the payer
-    );
+    IUniswapV3Pool(pool)
+      .swap(
+        address(this),
+        zeroForOne,
+        int256(amountIn),
+        // constants grabbed from v3-core TickMath, pasted here to avoid type conversion in new
+        // solidity version
+        zeroForOne
+          ? 4_295_128_739 + 1
+          : 1_461_446_703_485_210_103_287_273_052_203_988_822_378_723_970_342 - 1,
+        abi.encode(address(this)) // encode the payer
+      );
   }
 
   function uniswapV3SwapCallback(int256 amount0Delta, int256 amount1Delta, bytes calldata data)
