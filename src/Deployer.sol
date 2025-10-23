@@ -19,13 +19,14 @@ contract Deployer {
   IUNIMinter public immutable UNI_MINTER;
 
   address public constant RESOURCE = 0x1f9840a85d5aF5bf1D1762F925BDADdC4201F984;
-  uint256 public constant THRESHOLD = 69_420;
+  uint256 public constant THRESHOLD = 10_000e18;
   IUniswapV3Factory public constant V3_FACTORY =
     IUniswapV3Factory(0x1F98431c8aD98523631AE4a59f267346ea31F984);
+  bytes32 constant INITIAL_MERKLE_ROOT = bytes32(uint256(0xbeefbabe));
 
-  bytes32 constant SALT_ASSET_SINK = 0;
-  bytes32 constant SALT_RELEASER = 0;
-  bytes32 constant SALT_FEE_CONTROLLER = 0;
+  bytes32 constant SALT_ASSET_SINK = bytes32(uint256(1));
+  bytes32 constant SALT_RELEASER = bytes32(uint256(2));
+  bytes32 constant SALT_FEE_CONTROLLER = bytes32(uint256(3));
 
   //// ASSET SINK:
   /// 1. Deploy the AssetSink
@@ -39,12 +40,13 @@ contract Deployer {
 
   /// FEE_CONTROLLER:
   /// 7. Deploy the FeeController.
-  /// 8. Update the feeSetter to the owner.
-  /// 9. Store fee tiers.
-  /// 10. Update the owner on the fee controller.
+  /// 8. Set initial merkle root
+  /// 9. Update the feeSetter to the owner.
+  /// 10. Store fee tiers.
+  /// 11. Update the owner on the fee controller.
 
   /// UNIMinter
-  /// 11. Deploy the UNIMinter
+  /// 12. Deploy the UNIMinter
   ///   - To enable the UNIMinter, the owner must call `setMinter` on the UNI contract
   constructor() {
     address owner = V3_FACTORY.owner();
@@ -65,20 +67,24 @@ contract Deployer {
     /// 7. Deploy the FeeController.
     FEE_CONTROLLER =
       new V3FeeController{salt: SALT_FEE_CONTROLLER}(address(V3_FACTORY), address(ASSET_SINK));
+    FEE_CONTROLLER.setFeeSetter(address(this));
 
-    /// 8. Update the feeSetter to the owner.
+    /// 8. Set initial merkle root
+    FEE_CONTROLLER.setMerkleRoot(INITIAL_MERKLE_ROOT);
+
+    /// 9. Update the feeSetter to the owner.
     FEE_CONTROLLER.setFeeSetter(owner);
 
-    /// 9. Store fee tiers.
+    /// 10. Store fee tiers.
     FEE_CONTROLLER.storeFeeTier(100);
     FEE_CONTROLLER.storeFeeTier(500);
     FEE_CONTROLLER.storeFeeTier(3000);
     FEE_CONTROLLER.storeFeeTier(10_000);
 
-    /// 10. Update the owner on the fee controller.
+    /// 11. Update the owner on the fee controller.
     IOwned(address(FEE_CONTROLLER)).transferOwnership(owner);
 
-    /// 11. Deploy the UNIMinter
+    /// 12. Deploy the UNIMinter
     UNI_MINTER = new UNIMinter(owner);
   }
 }
