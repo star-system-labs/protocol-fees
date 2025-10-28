@@ -1,6 +1,29 @@
 # Uniswap Fee Collection
 
 *A unified system for collecting and converting fees from arbitrary revenue sources on arbitrary chains.*
+## Table of Contents
+- [Overview](#overview)
+- [Goals](#goals)
+- [Architecture](#architecture)
+- [Economic Incentives](#economic-incentives)
+- [Fault Tolerance](#fault-tolerance)
+- [Implementation Status](#implementation-status)
+- [Deployment Architecture](#deployment-architecture)
+- [Development](#development)
+    - [Prerequisites](#prerequisites)
+    - [Installation](#installation)
+    - [Testing](#testing)
+    - [Project Structure](#project-structure)
+- [Governance Proposal](#governance-proposal)
+- [Security](#security)
+- [Future Development](#future-development)
+    - [Protocol Fee Auctions](#protocol-fee-auctions)
+    - [Additional Protocol Support](#additional-protocol-support)
+    - [Cross-chain Expansion](#cross-chain-expansion)
+- [Contributing](#contributing)
+- [License](#license)
+- [Support](#support)
+
 
 ## Overview
 
@@ -207,6 +230,14 @@ test/
 ├── unit/                     # Individual contract tests
 └── fuzz/                     # Property-based testing
 ```
+
+## Governance Proposal
+
+For additional commentary and information please see Uniswap Governance Proposal [#92](https://www.tally.xyz/gov/uniswap/proposal/91)
+
+With the system already deployed, Uniswap Governance can elect into the system by:
+
+
 
 ## Security
 
