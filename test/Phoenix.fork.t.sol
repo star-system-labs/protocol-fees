@@ -292,7 +292,7 @@ contract PhoenixForkTest is Test {
 
   function test_releaseV3(address caller, address recipient) public {
     vm.assume(caller != address(0));
-    vm.assume(recipient != address(0));
+    vm.assume(recipient != address(0) && recipient != address(assetSink));
     test_collectFeeV3();
 
     // give the caller some UNI to burn
