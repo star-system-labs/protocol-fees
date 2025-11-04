@@ -30,7 +30,7 @@ contract TestV4FeeAdapter is PhoenixTestBase {
     feeAdapter = new V4FeeAdapter(address(poolManager), address(assetSink), owner);
 
     vm.prank(owner);
-    poolManager.setProtocolFeeAdapter(address(feeAdapter));
+    poolManager.setProtocolFeeController(address(feeAdapter));
 
     // Create mock tokens.
     mockCurrency = Currency.wrap(address(mockToken));
@@ -58,7 +58,7 @@ contract TestV4FeeAdapter is PhoenixTestBase {
   }
 
   function test_feeAdapter_isSet() public view {
-    assertEq(address(poolManager.protocolFeeAdapter()), address(feeAdapter));
+    assertEq(address(poolManager.protocolFeeController()), address(feeAdapter));
   }
 
   function test_assetSink_isSet() public view {
@@ -115,9 +115,7 @@ contract TestV4FeeAdapter is PhoenixTestBase {
     feeAdapter.collect(currency, amountRequested, amountExpected);
 
     vm.expectRevert(
-      abi.encodeWithSelector(
-        V4FeeAdapter.AmountCollectedTooLow.selector, 0, INITIAL_TOKEN_AMOUNT
-      )
+      abi.encodeWithSelector(V4FeeAdapter.AmountCollectedTooLow.selector, 0, INITIAL_TOKEN_AMOUNT)
     );
     feeAdapter.collect(currency, amountRequested, amountExpected);
   }
@@ -172,9 +170,7 @@ contract TestV4FeeAdapter is PhoenixTestBase {
     feeAdapter.collect(currency, amountRequested, amountExpected);
 
     vm.expectRevert(
-      abi.encodeWithSelector(
-        V4FeeAdapter.AmountCollectedTooLow.selector, 0, INITIAL_NATIVE_AMOUNT
-      )
+      abi.encodeWithSelector(V4FeeAdapter.AmountCollectedTooLow.selector, 0, INITIAL_NATIVE_AMOUNT)
     );
     feeAdapter.collect(currency, amountRequested, amountExpected);
   }

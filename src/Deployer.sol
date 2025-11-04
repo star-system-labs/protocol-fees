@@ -63,8 +63,7 @@ contract Deployer {
     IOwned(address(RELEASER)).transferOwnership(owner);
 
     /// 7. Deploy the FeeAdapter.
-    FEE_ADAPTER =
-      new V3FeeAdapter{salt: SALT_FEE_ADAPTER}(address(V3_FACTORY), address(ASSET_SINK));
+    FEE_ADAPTER = new V3FeeAdapter{salt: SALT_FEE_ADAPTER}(address(V3_FACTORY), address(ASSET_SINK));
 
     /// 8. Update the feeSetter to the owner.
     FEE_ADAPTER.setFeeSetter(owner);
