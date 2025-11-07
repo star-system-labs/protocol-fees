@@ -28,9 +28,9 @@ contract Deployer {
     bytes32(0x472c8960ea78de635eb7e32c5085f9fb963e626b5a68c939bfad24e022383b3a);
 
   uint8 constant DEFAULT_FEE_100 = 4 << 4 | 4; // default fee for 0.01% tier
-  uint8 constant DEFAULT_FEE_500 = 6 << 4 | 6; // default fee for 0.05% tier
-  uint8 constant DEFAULT_FEE_3000 = 8 << 4 | 8; // default fee for 0.3% tier
-  uint8 constant DEFAULT_FEE_10000 = 10 << 4 | 10; // default fee for 1% tier
+  uint8 constant DEFAULT_FEE_500 = 4 << 4 | 4; // default fee for 0.05% tier
+  uint8 constant DEFAULT_FEE_3000 = 6 << 4 | 6; // default fee for 0.3% tier
+  uint8 constant DEFAULT_FEE_10000 = 6 << 4 | 6; // default fee for 1% tier
 
   bytes32 constant SALT_ASSET_SINK = bytes32(uint256(1));
   bytes32 constant SALT_RELEASER = bytes32(uint256(2));

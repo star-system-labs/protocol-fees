@@ -74,9 +74,9 @@ contract DeployerTest is Test {
       bytes32(0x472c8960ea78de635eb7e32c5085f9fb963e626b5a68c939bfad24e022383b3a)
     );
     assertEq(feeController.defaultFees(100), 4 << 4 | 4);
-    assertEq(feeController.defaultFees(500), 6 << 4 | 6);
-    assertEq(feeController.defaultFees(3000), 8 << 4 | 8);
-    assertEq(feeController.defaultFees(10_000), 10 << 4 | 10);
+    assertEq(feeController.defaultFees(500), 4 << 4 | 4);
+    assertEq(feeController.defaultFees(3000), 6 << 4 | 6);
+    assertEq(feeController.defaultFees(10_000), 6 << 4 | 6);
   }
 
   function test_deployer_uniMinter_setUp() public view {

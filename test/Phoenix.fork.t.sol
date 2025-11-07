@@ -121,21 +121,15 @@ contract PhoenixForkTest is Test {
     (,,,,, uint8 protocolFee,) = IUniswapV3Pool(pool0).slot0();
     assertEq(protocolFee, 4 << 4 | 4);
     (,,,,, protocolFee,) = IUniswapV3Pool(pool1).slot0();
-    assertEq(protocolFee, 6 << 4 | 6);
+    assertEq(protocolFee, 4 << 4 | 4);
     (,,,,, protocolFee,) = IUniswapV3Pool(pool2).slot0();
-    assertEq(protocolFee, 8 << 4 | 8);
+    assertEq(protocolFee, 6 << 4 | 6);
     (,,,,, protocolFee,) = IUniswapV3Pool(pool3).slot0();
-    assertEq(protocolFee, 10 << 4 | 10);
+    assertEq(protocolFee, 6 << 4 | 6);
   }
 
   function test_enableFeeV3MultiProof() public {
     assertEq(feeController.feeSetter(), owner);
-    vm.startPrank(owner);
-    feeController.setDefaultFeeByFeeTier(100, 10 << 4 | 10);
-    feeController.setDefaultFeeByFeeTier(500, 8 << 4 | 8);
-    feeController.setDefaultFeeByFeeTier(3000, 6 << 4 | 6);
-    feeController.setDefaultFeeByFeeTier(10_000, 4 << 4 | 4);
-    vm.stopPrank();
 
     // Setting up the pairs for USDC-WETH and DAI-WETH
     IV3FeeController.Pair[] memory pairs = new IV3FeeController.Pair[](2);
@@ -179,23 +173,23 @@ contract PhoenixForkTest is Test {
 
     // Verify fees were set correctly for USDC-WETH pools
     (,,,,, uint8 protocolFee,) = IUniswapV3Pool(pool0).slot0();
-    assertEq(protocolFee, 10 << 4 | 10);
+    assertEq(protocolFee, 4 << 4 | 4);
     (,,,,, protocolFee,) = IUniswapV3Pool(pool1).slot0();
-    assertEq(protocolFee, 8 << 4 | 8);
+    assertEq(protocolFee, 4 << 4 | 4);
     (,,,,, protocolFee,) = IUniswapV3Pool(pool2).slot0();
     assertEq(protocolFee, 6 << 4 | 6);
     (,,,,, protocolFee,) = IUniswapV3Pool(pool3).slot0();
-    assertEq(protocolFee, 4 << 4 | 4);
+    assertEq(protocolFee, 6 << 4 | 6);
 
     // Verify fees were set correctly for DAI-WETH pools
     (,,,,, protocolFee,) = IUniswapV3Pool(daiPool0).slot0();
-    assertEq(protocolFee, 10 << 4 | 10);
+    assertEq(protocolFee, 4 << 4 | 4);
     (,,,,, protocolFee,) = IUniswapV3Pool(daiPool1).slot0();
-    assertEq(protocolFee, 8 << 4 | 8);
+    assertEq(protocolFee, 4 << 4 | 4);
     (,,,,, protocolFee,) = IUniswapV3Pool(daiPool2).slot0();
     assertEq(protocolFee, 6 << 4 | 6);
     (,,,,, protocolFee,) = IUniswapV3Pool(daiPool3).slot0();
-    assertEq(protocolFee, 4 << 4 | 4);
+    assertEq(protocolFee, 6 << 4 | 6);
   }
 
   function test_enableFeeV2() public {
@@ -241,22 +235,22 @@ contract PhoenixForkTest is Test {
     _exactInSwapV3(pool1, false, 1e18);
 
     (uint128 token0Pool1, uint128 token1Pool1) = IUniswapV3Pool(pool1).protocolFees();
-    assertApproxEqRel(token0Pool1, uint256(1000e6).mulWadDown(0.0005e18) / 6, 0.0001e18);
-    assertApproxEqRel(token1Pool1, uint256(1e18).mulWadDown(0.0005e18) / 6, 0.0001e18);
+    assertApproxEqRel(token0Pool1, uint256(1000e6).mulWadDown(0.0005e18) / 4, 0.0001e18);
+    assertApproxEqRel(token1Pool1, uint256(1e18).mulWadDown(0.0005e18) / 4, 0.0001e18);
 
     // swap on 30 bip pool
     _exactInSwapV3(pool2, true, 1000e6);
     _exactInSwapV3(pool2, false, 1e18);
     (uint128 token0Pool2, uint128 token1Pool2) = IUniswapV3Pool(pool2).protocolFees();
-    assertApproxEqRel(token0Pool2, uint256(1000e6).mulWadDown(0.003e18) / 8, 0.0001e18);
-    assertApproxEqRel(token1Pool2, uint256(1e18).mulWadDown(0.003e18) / 8, 0.0001e18);
+    assertApproxEqRel(token0Pool2, uint256(1000e6).mulWadDown(0.003e18) / 6, 0.0001e18);
+    assertApproxEqRel(token1Pool2, uint256(1e18).mulWadDown(0.003e18) / 6, 0.0001e18);
 
     // swap on 1% pool
     _exactInSwapV3(pool3, true, 1000e6);
     _exactInSwapV3(pool3, false, 1e18);
     (uint128 token0Pool3, uint128 token1Pool3) = IUniswapV3Pool(pool3).protocolFees();
-    assertApproxEqRel(token0Pool3, uint256(1000e6).mulWadDown(0.01e18) / 10, 0.0001e18);
-    assertApproxEqRel(token1Pool3, uint256(1e18).mulWadDown(0.01e18) / 10, 0.0001e18);
+    assertApproxEqRel(token0Pool3, uint256(1000e6).mulWadDown(0.01e18) / 6, 0.0001e18);
+    assertApproxEqRel(token1Pool3, uint256(1e18).mulWadDown(0.01e18) / 6, 0.0001e18);
 
     IV3FeeController.CollectParams[] memory params = new IV3FeeController.CollectParams[](3);
     params[0] = IV3FeeController.CollectParams({
