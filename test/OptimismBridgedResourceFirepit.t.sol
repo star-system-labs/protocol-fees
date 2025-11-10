@@ -7,15 +7,15 @@ import {Currency, CurrencyLibrary} from "v4-core/types/Currency.sol";
 import {Predeploys} from "@eth-optimism-bedrock/src/libraries/Predeploys.sol";
 
 import {OptimismBridgedResourceFirepit} from "../src/releasers/OptimismBridgedResourceFirepit.sol";
-import {AssetSink, IAssetSink} from "../src/AssetSink.sol";
+import {TokenJar, ITokenJar} from "../src/TokenJar.sol";
 import {INonce} from "../src/interfaces/base/INonce.sol";
 import {IResourceManager} from "../src/interfaces/base/IResourceManager.sol";
 import {IL2StandardBridge} from "../src/interfaces/external/IL2StandardBridge.sol";
 
 // Concrete implementation of abstract OptimismBridgedResourceFirepit for testing
 contract TestOptimismBridgedResourceFirepit is OptimismBridgedResourceFirepit {
-  constructor(address _resource, uint256 _threshold, address _assetSink)
-    OptimismBridgedResourceFirepit(_resource, _threshold, _assetSink)
+  constructor(address _resource, uint256 _threshold, address _tokenJar)
+    OptimismBridgedResourceFirepit(_resource, _threshold, _tokenJar)
   {
     // Approve the L2 Standard Bridge to transfer our resource tokens
     // Note on real OP stack chains with OptimismMintableERC20, this approval would not be needed
@@ -56,7 +56,7 @@ contract MockL2StandardBridge is IL2StandardBridge {
 
 contract OptimismBridgedResourceFirepitTest is Test {
   TestOptimismBridgedResourceFirepit internal firepit;
-  AssetSink internal assetSink;
+  TokenJar internal tokenJar;
   MockERC20 internal resource;
   MockERC20 internal mockToken;
   MockL2StandardBridge internal mockBridge;
@@ -78,34 +78,34 @@ contract OptimismBridgedResourceFirepitTest is Test {
     mockBridge = new MockL2StandardBridge();
     vm.etch(Predeploys.L2_STANDARD_BRIDGE, address(mockBridge).code);
 
-    // Deploy AssetSink (no prank needed - deployer is the test contract)
-    assetSink = new AssetSink();
+    // Deploy tokenJar (no prank needed - deployer is the test contract)
+    tokenJar = new TokenJar();
 
     // Deploy OptimismBridgedResourceFirepit (deployer is the test contract, becomes owner)
     firepit = new TestOptimismBridgedResourceFirepit(
-      address(resource), INITIAL_THRESHOLD, address(assetSink)
+      address(resource), INITIAL_THRESHOLD, address(tokenJar)
     );
 
     // Set up permissions
     firepit.setThresholdSetter(thresholdSetter); // test contract is owner
-    assetSink.setReleaser(address(firepit)); // test contract is owner
+    tokenJar.setReleaser(address(firepit)); // test contract is owner
 
-    // Mint tokens to users and assetSink
+    // Mint tokens to users and tokenJar
     resource.mint(alice, INITIAL_TOKEN_AMOUNT);
     resource.mint(bob, INITIAL_TOKEN_AMOUNT);
-    mockToken.mint(address(assetSink), INITIAL_TOKEN_AMOUNT);
+    mockToken.mint(address(tokenJar), INITIAL_TOKEN_AMOUNT);
 
-    // Give native currency to assetSink
-    vm.deal(address(assetSink), INITIAL_NATIVE_AMOUNT);
+    // Give native currency to tokenJar
+    vm.deal(address(tokenJar), INITIAL_NATIVE_AMOUNT);
     vm.deal(alice, INITIAL_NATIVE_AMOUNT);
     vm.deal(bob, INITIAL_NATIVE_AMOUNT);
   }
 
   function test_constructor() public view {
     assertEq(address(firepit.RESOURCE()), address(resource));
-    assertEq(firepit.RESOURCE_RECIPIENT(), address(0xdead));
+    assertEq(firepit.RESOURCE_RECIPIENT(), address(firepit));
     assertEq(firepit.threshold(), INITIAL_THRESHOLD);
-    assertEq(address(firepit.ASSET_SINK()), address(assetSink));
+    assertEq(address(firepit.TOKEN_JAR()), address(tokenJar));
     assertEq(firepit.owner(), address(this));
     assertEq(firepit.nonce(), 0);
   }
@@ -137,7 +137,7 @@ contract OptimismBridgedResourceFirepitTest is Test {
 
     // Check mock token was released to alice
     assertEq(mockToken.balanceOf(alice), aliceTokenBefore + INITIAL_TOKEN_AMOUNT);
-    assertEq(mockToken.balanceOf(address(assetSink)), 0);
+    assertEq(mockToken.balanceOf(address(tokenJar)), 0);
 
     // Check nonce was incremented
     assertEq(firepit.nonce(), nonceBefore + 1);
@@ -145,7 +145,7 @@ contract OptimismBridgedResourceFirepitTest is Test {
 
   function test_release_successfulNativeRelease() public {
     uint256 bobNativeBefore = bob.balance;
-    uint256 assetSinkNativeBefore = address(assetSink).balance;
+    uint256 tokenJarNativeBefore = address(tokenJar).balance;
     uint256 nonceBefore = firepit.nonce();
 
     vm.startPrank(bob);
@@ -157,8 +157,8 @@ contract OptimismBridgedResourceFirepitTest is Test {
     vm.stopPrank();
 
     // Check native currency was released
-    assertEq(bob.balance, bobNativeBefore + assetSinkNativeBefore);
-    assertEq(address(assetSink).balance, 0);
+    assertEq(bob.balance, bobNativeBefore + tokenJarNativeBefore);
+    assertEq(address(tokenJar).balance, 0);
 
     // Check nonce was incremented
     assertEq(firepit.nonce(), nonceBefore + 1);
@@ -167,7 +167,7 @@ contract OptimismBridgedResourceFirepitTest is Test {
   function test_release_successfulMultiAssetRelease() public {
     uint256 aliceTokenBefore = mockToken.balanceOf(alice);
     uint256 aliceNativeBefore = alice.balance;
-    uint256 assetSinkNativeBefore = address(assetSink).balance;
+    uint256 tokenJarNativeBefore = address(tokenJar).balance;
     uint256 nonceBefore = firepit.nonce();
 
     vm.startPrank(alice);
@@ -181,9 +181,9 @@ contract OptimismBridgedResourceFirepitTest is Test {
 
     // Check both token and native were released
     assertEq(mockToken.balanceOf(alice), aliceTokenBefore + INITIAL_TOKEN_AMOUNT);
-    assertEq(alice.balance, aliceNativeBefore + assetSinkNativeBefore);
-    assertEq(mockToken.balanceOf(address(assetSink)), 0);
-    assertEq(address(assetSink).balance, 0);
+    assertEq(alice.balance, aliceNativeBefore + tokenJarNativeBefore);
+    assertEq(mockToken.balanceOf(address(tokenJar)), 0);
+    assertEq(address(tokenJar).balance, 0);
 
     // Check nonce was incremented
     assertEq(firepit.nonce(), nonceBefore + 1);
@@ -211,7 +211,7 @@ contract OptimismBridgedResourceFirepitTest is Test {
 
     Currency[] memory releaseTokens = new Currency[](1);
     releaseTokens[0] = Currency.wrap(address(mockToken));
-    vm.expectRevert();
+    vm.expectRevert(address(resource));
     firepit.release(0, releaseTokens, alice);
     vm.stopPrank();
   }
@@ -222,7 +222,7 @@ contract OptimismBridgedResourceFirepitTest is Test {
 
     Currency[] memory releaseTokens = new Currency[](1);
     releaseTokens[0] = Currency.wrap(address(mockToken));
-    vm.expectRevert();
+    vm.expectRevert(address(resource));
     firepit.release(0, releaseTokens, alice);
     vm.stopPrank();
   }
@@ -302,14 +302,14 @@ contract OptimismBridgedResourceFirepitTest is Test {
     assertEq(firepit.nonce(), initialNonce + 1);
 
     // Mint more tokens to alice
-    mockToken.mint(address(assetSink), INITIAL_TOKEN_AMOUNT);
+    mockToken.mint(address(tokenJar), INITIAL_TOKEN_AMOUNT);
 
     // Second release with incremented nonce
     firepit.release(initialNonce + 1, releaseTokens, alice);
     assertEq(firepit.nonce(), initialNonce + 2);
 
     // Mint more tokens to alice
-    mockToken.mint(address(assetSink), INITIAL_TOKEN_AMOUNT);
+    mockToken.mint(address(tokenJar), INITIAL_TOKEN_AMOUNT);
 
     // Third release
     firepit.release(initialNonce + 2, releaseTokens, alice);
@@ -388,7 +388,7 @@ contract OptimismBridgedResourceFirepitTest is Test {
       tokens[i] = new MockERC20(
         string.concat("Token", vm.toString(i)), string.concat("TK", vm.toString(i)), 18
       );
-      tokens[i].mint(address(assetSink), INITIAL_TOKEN_AMOUNT);
+      tokens[i].mint(address(tokenJar), INITIAL_TOKEN_AMOUNT);
       assets[i] = Currency.wrap(address(tokens[i]));
     }
 
@@ -401,7 +401,7 @@ contract OptimismBridgedResourceFirepitTest is Test {
     // Verify all tokens were released
     for (uint8 i = 0; i < numAssets; i++) {
       assertEq(tokens[i].balanceOf(alice), INITIAL_TOKEN_AMOUNT);
-      assertEq(tokens[i].balanceOf(address(assetSink)), 0);
+      assertEq(tokens[i].balanceOf(address(tokenJar)), 0);
     }
   }
 

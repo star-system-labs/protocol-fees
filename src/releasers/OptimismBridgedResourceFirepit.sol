@@ -8,46 +8,53 @@ import {ERC20} from "solmate/src/tokens/ERC20.sol";
 import {SafeTransferLib} from "solmate/src/utils/SafeTransferLib.sol";
 import {ResourceManager} from "../base/ResourceManager.sol";
 import {Nonce} from "../base/Nonce.sol";
-import {IAssetSink} from "../interfaces/IAssetSink.sol";
+import {ITokenJar} from "../interfaces/ITokenJar.sol";
 import {IReleaser} from "../interfaces/IReleaser.sol";
+import {ExchangeReleaser} from "./ExchangeReleaser.sol";
 
 /// @title OptimismBridgedResourceFirepit
-/// @notice A releaser that withdraws a bridged resource to the burn address on L1 via OP standard
-/// bridge
-/// @custom:security-contact security@uniswap.org
-abstract contract OptimismBridgedResourceFirepit is IReleaser, ResourceManager, Nonce {
+/// @notice A releaser that implements a two-stage burn process for bridged resource tokens
+/// @dev Two-stage burn from an OP Stack L2 to the underlying resource on L1
+/// **Stage 1: L2 Collection and Bridge Initiation**
+/// - User calls `release()` providing resource tokens as payment
+/// - ExchangeReleaser transfers resource tokens from user to this smart contract
+/// - TokenJar releases accumulated fee assets to the specified recipient
+/// - _afterRelease() initiates bridge withdrawal to L1 burn address (0xdead)
+/// **Stage 2: L1 Finalization**
+/// - L2StandardBridge burns the L2 tokens held by this contract
+/// - Cross-domain message is queued (7-day challenge period on mainnet)
+/// - L1StandardBridge finalizes withdrawal and transfers tokens to 0xdead on L1
+abstract contract OptimismBridgedResourceFirepit is ExchangeReleaser {
   using SafeTransferLib for ERC20;
 
-  /// @inheritdoc IReleaser
-  IAssetSink public immutable ASSET_SINK;
+  /// @dev The minimum gas limit for the withdrawal transaction to L1.
+  /// @dev 35,000 gas is sufficient for a simple transfer to 0xdead on L1
   uint32 internal constant WITHDRAWAL_MIN_GAS = 35_000;
 
-  /// @notice Creates a new ExchangeReleaser instance
-  /// @param _resource The address of the resource token that must be transferred
-  /// @param _assetSink The address of the AssetSink contract holding the assets
-  constructor(address _resource, uint256 _threshold, address _assetSink)
-    ResourceManager(_resource, _threshold, msg.sender, address(0xdead))
-  {
-    // assert resource is an OptimismMintableERC20
-    ASSET_SINK = IAssetSink(payable(_assetSink));
-  }
+  /// @dev Final recipient of the bridged resource on L1 (burn address)
+  /// @dev Note: This is different from RESOURCE_RECIPIENT which is address(this) on L2
+  address internal constant L1_RESOURCE_RECIPIENT = address(0xdead);
 
-  /// @inheritdoc IReleaser
-  function release(uint256 _nonce, Currency[] calldata assets, address recipient) external virtual {
-    _release(_nonce, assets, recipient);
-  }
+  /// @notice Creates a new OptimismBridgedResourceFirepit instance
+  /// @param _resource The address of the resource token (must be OptimismMintableERC20)
+  /// @param _threshold The minimum amount of resource tokens required for exchange
+  /// @param _tokenJar The address of the TokenJar contract holding accumulated fee assets
+  /// @dev Sets RESOURCE_RECIPIENT to address(this) to enable the two-stage burn:
+  ///      Stage 1: Collect tokens here (L2) -> Stage 2: Bridge and burn on L1
+  constructor(address _resource, uint256 _threshold, address _tokenJar)
+    ExchangeReleaser(_resource, _threshold, _tokenJar, address(this))
+  {}
 
-  /// @notice Internal function to handle the nonce check, withdraw the RESOURCE, then
-  /// handle the release of assets on the AssetSink.
-  function _release(uint256 _nonce, Currency[] calldata assets, address recipient)
-    internal
-    handleNonce(_nonce)
-  {
-    // Transfer resource from caller into this contract
-    RESOURCE.safeTransferFrom(msg.sender, address(this), threshold);
-    // Withdraw the resource back to L1 burn address
+  /// @notice Hook called after assets are released - initiates stage 2 withdrawal to L1
+  function _afterRelease(Currency[] calldata, address) internal override {
+    // Stage 2: Initiate bridge withdrawal to L1 burn address
+    // The bridge will:
+    // 1. Burn the L2 tokens held by this contract
+    // 2. Queue a cross-domain message for L1
+    // 3. After challenge period, transfer underlying resource tokens to 0xdead on L1
     IL2StandardBridge(Predeploys.L2_STANDARD_BRIDGE)
-      .withdrawTo(address(RESOURCE), RESOURCE_RECIPIENT, threshold, WITHDRAWAL_MIN_GAS, bytes(""));
-    ASSET_SINK.release(assets, recipient);
+      .withdrawTo(
+        address(RESOURCE), L1_RESOURCE_RECIPIENT, threshold, WITHDRAWAL_MIN_GAS, bytes("")
+      );
   }
 }
