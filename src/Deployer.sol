@@ -5,10 +5,8 @@ import {V3FeeAdapter} from "./feeAdapters/V3FeeAdapter.sol";
 import {ITokenJar} from "./interfaces/ITokenJar.sol";
 import {TokenJar} from "./TokenJar.sol";
 import {Firepit} from "./releasers/Firepit.sol";
-import {UNIMinter} from "./UNIMinter.sol";
 import {IReleaser} from "./interfaces/IReleaser.sol";
 import {IV3FeeAdapter} from "./interfaces/IV3FeeAdapter.sol";
-import {IUNIMinter} from "./interfaces/IUNIMinter.sol";
 import {IOwned} from "./interfaces/base/IOwned.sol";
 import {IUniswapV3Factory} from "v3-core/contracts/interfaces/IUniswapV3Factory.sol";
 
@@ -16,7 +14,6 @@ contract Deployer {
   ITokenJar public immutable TOKEN_JAR;
   IReleaser public immutable RELEASER;
   IV3FeeAdapter public immutable FEE_ADAPTER;
-  IUNIMinter public immutable UNI_MINTER;
 
   address public constant RESOURCE = 0x1f9840a85d5aF5bf1D1762F925BDADdC4201F984;
   uint256 public constant THRESHOLD = 69_420;
@@ -42,10 +39,6 @@ contract Deployer {
   /// 8. Update the feeSetter to the owner.
   /// 9. Store fee tiers.
   /// 10. Update the owner on the fee adapter.
-
-  /// UNIMinter
-  /// 11. Deploy the UNIMinter
-  ///   - To enable the UNIMinter, the owner must call `setMinter` on the UNI contract
   constructor() {
     address owner = V3_FACTORY.owner();
     /// 1. Deploy the TokenJar.
@@ -76,8 +69,5 @@ contract Deployer {
 
     /// 10. Update the owner on the fee adapter.
     IOwned(address(FEE_ADAPTER)).transferOwnership(owner);
-
-    /// 11. Deploy the UNIMinter
-    UNI_MINTER = new UNIMinter(owner);
   }
 }

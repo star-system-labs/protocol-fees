@@ -197,8 +197,6 @@ forge coverage
 src/
 ├── TokenJar.sol             // General purpose contract for receiving fees
 ├── Deployer.sol              // A deployer contract to instantiate the initial contracts
-├── UNIMinter.sol             // UNI-token minting contract to facilitate multiple recipients
-├── UNIVesting.sol            // A vesting contract to divide minted tokens into 12 claims
 ├── base
 │   ├── Nonce.sol             // Utility contract to safely sequence multiple pending transactions
 │   └── ResourceManager.sol.  // Utility contract for defining the `RESOURCE` token and its amount requirements
@@ -209,7 +207,6 @@ src/
 ├── interfaces/               // interfaces
 ├── libraries
 │   ├── ArrayLib.sol          // Utility library
-│   └── VestingLib.sol        // Utility library for vesting logic
 └── releasers
     ├── ExchangeReleaser.sol  // Utility contract to exchange a RESOURCE for Token Jar assets
     └── Firepit.sol           // Burns UNI (resource) in exchange for Token Jar assets
@@ -221,11 +218,8 @@ test
 ├── ExchangeReleaser.t.sol
 ├── Firepit.t.sol
 ├── Phoenix.fork.t.sol        // Fork tests against Ethereum Mainnet, using Deployer.sol
-├── UNIMinter.t.sol
 ├── V3FeeAdapter.t.sol
 ├── V4FeeAdapter.t.sol
-├── Vesting.t.sol
-├── VestingLib.t.sol
 ├── interfaces/               // interfaces for integrations
 ├── mocks/                    // mocks and examples
 └── utils

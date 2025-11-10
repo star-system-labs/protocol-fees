@@ -24,6 +24,7 @@ IV3FeeAdapter public immutable FEE_ADAPTER
 ```
 
 
+<<<<<<< Updated upstream
 ### UNI_MINTER
 
 ```solidity
@@ -31,6 +32,8 @@ IUNIMinter public immutable UNI_MINTER
 ```
 
 
+=======
+>>>>>>> Stashed changes
 ### RESOURCE
 
 ```solidity
@@ -89,9 +92,6 @@ FEE_ADAPTER:
 8. Update the feeSetter to the owner.
 9. Store fee tiers.
 10. Update the owner on the fee adapter.
-UNIMinter
-11. Deploy the UNIMinter
-- To enable the UNIMinter, the owner must call `setMinter` on the UNI contract
 
 
 ```solidity
