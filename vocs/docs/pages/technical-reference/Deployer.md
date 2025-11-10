@@ -1,5 +1,5 @@
 # Deployer
-[Git Source](https://github.com/Uniswap/phoenix-fees/blob/f7ccbcc4f1be2c8485a362f78f4f1ea34145b2b0/src/Deployer.sol)
+[Git Source](https://github.com/Uniswap/protocol-fees/blob/f7ccbcc4f1be2c8485a362f78f4f1ea34145b2b0/src/Deployer.sol)
 
 
 ## State Variables
@@ -21,13 +21,6 @@ IReleaser public immutable RELEASER
 
 ```solidity
 IV3FeeAdapter public immutable FEE_ADAPTER
-```
-
-
-### UNI_MINTER
-
-```solidity
-IUNIMinter public immutable UNI_MINTER
 ```
 
 
@@ -89,9 +82,6 @@ FEE_ADAPTER:
 8. Update the feeSetter to the owner.
 9. Store fee tiers.
 10. Update the owner on the fee adapter.
-UNIMinter
-11. Deploy the UNIMinter
-- To enable the UNIMinter, the owner must call `setMinter` on the UNI contract
 
 
 ```solidity

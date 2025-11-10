@@ -11,7 +11,6 @@ import {ITokenJar} from "../src/interfaces/ITokenJar.sol";
 import {IReleaser} from "../src/interfaces/IReleaser.sol";
 import {IOwned} from "../src/interfaces/base/IOwned.sol";
 import {IV3FeeAdapter} from "../src/interfaces/IV3FeeAdapter.sol";
-import {IUNIMinter} from "../src/interfaces/IUNIMinter.sol";
 
 import {console} from "forge-std/console.sol";
 
@@ -69,11 +68,5 @@ contract DeployerTest is Test {
     assertEq(feeAdapter.feeSetter(), factory.owner());
     assertEq(address(feeAdapter.TOKEN_JAR()), address(tokenJar));
     assertEq(address(feeAdapter.FACTORY()), address(factory));
-  }
-
-  function test_deployer_uniMinter_setUp() public view {
-    IUNIMinter uniMinter = deployer.UNI_MINTER();
-    assertEq(IOwned(address(uniMinter)).owner(), factory.owner());
-    assertEq(address(uniMinter.UNI()), 0x1f9840a85d5aF5bf1D1762F925BDADdC4201F984);
   }
 }
