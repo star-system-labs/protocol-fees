@@ -1,31 +1,31 @@
 # V4FeeAdapter
-[Git Source](https://github.com/Uniswap/protocol-fees/blob/38e66458d36a90d45d2da802d97629a7d8137a57/src/feeAdapters/V4FeeAdapter.sol)
+[Git Source](https://github.com/Uniswap/protocol-fees/blob/f7ccbcc4f1be2c8485a362f78f4f1ea34145b2b0/src/feeAdapters/V4FeeAdapter.sol)
 
 **Inherits:**
 Owned
 
-Triggers the collection of protocol fees to a predefined fee sink.
+Triggers the collection of protocol fees to a predefined token jar.
 
 
 ## State Variables
 ### POOL_MANAGER
 
 ```solidity
-IPoolManager public immutable POOL_MANAGER;
+IPoolManager public immutable POOL_MANAGER
 ```
 
 
-### feeSink
+### tokenJar
 
 ```solidity
-address public feeSink;
+address public tokenJar
 ```
 
 
 ### merkleRoot
 
 ```solidity
-bytes32 public merkleRoot;
+bytes32 public merkleRoot
 ```
 
 
@@ -34,12 +34,12 @@ bytes32 public merkleRoot;
 
 
 ```solidity
-constructor(address _poolManager, address _feeSink, address _owner) Owned(_owner);
+constructor(address _poolManager, address _tokenJar, address _owner) Owned(_owner);
 ```
 
 ### collect
 
-Collects the protocol fees for the given currencies to the fee sink.
+Collects the protocol fees for the given currencies to the token jar.
 
 
 ```solidity
@@ -62,7 +62,7 @@ function collect(
 
 Sets the merkle root for the fee adapter.
 
-*only callable by owner*
+only callable by owner
 
 
 ```solidity

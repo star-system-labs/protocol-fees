@@ -9,14 +9,14 @@ import {RevertBombToken} from "../mocks/RevertBombToken.sol";
 import {Currency, CurrencyLibrary} from "v4-core/types/Currency.sol";
 
 import {Firepit} from "../../src/releasers/Firepit.sol";
-import {AssetSink, IAssetSink} from "../../src/AssetSink.sol";
+import {TokenJar, ITokenJar} from "../../src/TokenJar.sol";
 import {IReleaser} from "../../src/interfaces/IReleaser.sol";
 import {OPStackFirepitSource} from "../../src/crosschain/OPStackFirepitSource.sol";
 import {FirepitDestination} from "../../src/crosschain/FirepitDestination.sol";
 
 import {MockCrossDomainMessenger} from "../mocks/MockCrossDomainMessenger.sol";
 
-contract PhoenixTestBase is Test {
+contract ProtocolFeesTestBase is Test {
   address owner;
   address alice;
   address bob;
@@ -27,7 +27,7 @@ contract PhoenixTestBase is Test {
   OOGToken oogToken;
   RevertBombToken revertBombToken;
 
-  IAssetSink assetSink;
+  ITokenJar tokenJar;
   IReleaser firepit;
   OPStackFirepitSource opStackFirepitSource;
   MockCrossDomainMessenger mockCrossDomainMessenger = new MockCrossDomainMessenger();
@@ -68,12 +68,12 @@ contract PhoenixTestBase is Test {
     revertBombToken = new RevertBombToken("RevertBombToken", "RBT", 18);
 
     vm.startPrank(owner);
-    assetSink = new AssetSink();
-    firepit = new Firepit(address(resource), INITIAL_TOKEN_AMOUNT, address(assetSink));
+    tokenJar = new TokenJar();
+    firepit = new Firepit(address(resource), INITIAL_TOKEN_AMOUNT, address(tokenJar));
 
     firepit.setThresholdSetter(owner);
 
-    firepitDestination = new FirepitDestination(owner, address(assetSink));
+    firepitDestination = new FirepitDestination(owner, address(tokenJar));
     // owner is set to the msg.sender
     opStackFirepitSource = new OPStackFirepitSource(
       address(resource), address(mockCrossDomainMessenger), address(firepitDestination)
@@ -81,20 +81,20 @@ contract PhoenixTestBase is Test {
     opStackFirepitSource.setThresholdSetter(owner);
     opStackFirepitSource.setThreshold(INITIAL_TOKEN_AMOUNT);
 
-    revertingToken.setRevertFrom(address(assetSink), true);
+    revertingToken.setRevertFrom(address(tokenJar), true);
 
     firepitDestination.setAllowableSource(address(opStackFirepitSource));
     firepitDestination.setAllowableCallers(address(mockCrossDomainMessenger), true);
     vm.stopPrank();
 
-    // Supply tokens to the AssetSink
-    mockToken.mint(address(assetSink), INITIAL_TOKEN_AMOUNT);
-    revertingToken.mint(address(assetSink), INITIAL_TOKEN_AMOUNT);
-    oogToken.mint(address(assetSink), INITIAL_TOKEN_AMOUNT);
-    revertBombToken.mint(address(assetSink), INITIAL_TOKEN_AMOUNT);
+    // Supply tokens to the TokenJar
+    mockToken.mint(address(tokenJar), INITIAL_TOKEN_AMOUNT);
+    revertingToken.mint(address(tokenJar), INITIAL_TOKEN_AMOUNT);
+    oogToken.mint(address(tokenJar), INITIAL_TOKEN_AMOUNT);
+    revertBombToken.mint(address(tokenJar), INITIAL_TOKEN_AMOUNT);
 
-    // Supply native tokens to the AssetSink
-    vm.deal(address(assetSink), INITIAL_NATIVE_AMOUNT);
+    // Supply native tokens to the TokenJar
+    vm.deal(address(tokenJar), INITIAL_NATIVE_AMOUNT);
 
     // Define releasable assets
     __createReleaseArrays();

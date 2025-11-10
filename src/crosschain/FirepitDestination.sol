@@ -4,13 +4,13 @@ pragma solidity ^0.8.29;
 import {Owned} from "solmate/src/auth/Owned.sol";
 import {Currency} from "v4-core/types/Currency.sol";
 import {IL1CrossDomainMessenger} from "../interfaces/IL1CrossDomainMessenger.sol";
-import {AssetSink} from "../AssetSink.sol";
+import {TokenJar} from "../TokenJar.sol";
 import {Nonce} from "../base/Nonce.sol";
 
 error UnauthorizedCall();
 
 /// @notice a contract for receiving crosschain messages. Validates messages and releases assets
-/// from the AssetSink
+/// from the TokenJar
 contract FirepitDestination is Nonce, Owned {
   /// @notice the source contract that is allowed to originate messages to this contract i.e.
   /// FirepitSource
@@ -21,13 +21,13 @@ contract FirepitDestination is Nonce, Owned {
   /// @dev updatable by owner
   mapping(address callers => bool allowed) public allowableCallers;
 
-  AssetSink public immutable ASSET_SINK;
+  TokenJar public immutable TOKEN_JAR;
   uint256 public constant MINIMUM_RELEASE_GAS = 100_000;
 
   event FailedRelease(uint256 indexed _nonce, address indexed _claimer);
 
-  constructor(address _owner, address _assetSink) Owned(_owner) {
-    ASSET_SINK = AssetSink(payable(_assetSink));
+  constructor(address _owner, address _tokenJar) Owned(_owner) {
+    TOKEN_JAR = TokenJar(payable(_tokenJar));
   }
 
   modifier onlyAllowed() {
@@ -39,7 +39,7 @@ contract FirepitDestination is Nonce, Owned {
     _;
   }
 
-  /// @notice Calls Asset Sink to release assets to a destination
+  /// @notice Calls Token Jar to release assets to a destination
   /// @dev only callable by the messenger via the authorized L1 source contract
   function claimTo(uint256 _nonce, Currency[] calldata assets, address claimer)
     external
@@ -50,7 +50,7 @@ contract FirepitDestination is Nonce, Owned {
       emit FailedRelease(_nonce, claimer);
       return;
     }
-    try ASSET_SINK.release(assets, claimer) {}
+    try TOKEN_JAR.release(assets, claimer) {}
     catch {
       emit FailedRelease(_nonce, claimer);
       return;
