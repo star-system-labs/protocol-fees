@@ -21,7 +21,6 @@
     - [IL1CrossDomainMessenger](src/interfaces/IL1CrossDomainMessenger.sol/interface.IL1CrossDomainMessenger.md)
     - [IReleaser](src/interfaces/IReleaser.sol/interface.IReleaser.md)
     - [ITokenJar](src/interfaces/ITokenJar.sol/interface.ITokenJar.md)
-    - [IUNI](src/interfaces/IUNI.sol/interface.IUNI.md)
     - [IUniswapV3FactoryOwnerActions](src/interfaces/IUniswapV3FactoryOwnerActions.sol/interface.IUniswapV3FactoryOwnerActions.md)
     - [IUniswapV3PoolOwnerActions](src/interfaces/IUniswapV3PoolOwnerActions.sol/interface.IUniswapV3PoolOwnerActions.md)
     - [IV3FeeAdapter](src/interfaces/IV3FeeAdapter.sol/interface.IV3FeeAdapter.md)
