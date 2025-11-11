@@ -54,6 +54,7 @@ contract UNIVesting is Owned, IUNIVesting {
 
   /// @inheritdoc IUNIVesting
   function updateVestingAmount(uint256 amount) public onlyOwner {
+    require(quarters() == 0, CannotUpdateAmount());
     quarterlyVestingAmount = amount;
     emit VestingAmountUpdated(amount);
   }

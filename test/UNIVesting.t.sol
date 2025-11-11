@@ -46,7 +46,7 @@ contract UNIVestingTest is Test {
     vesting.withdraw();
   }
 
-  function test_vesting_calculate_quarters_none(uint256 timestamp) public {
+  function test_vesting_calculate_quarters_none(uint256 timestamp) public view {
     // before Apr 1, 2026
     vm.assume(timestamp <= APR_1_2026 - 1);
     vm.assertEq(vesting.quarters(), 0);
@@ -166,6 +166,17 @@ contract UNIVestingTest is Test {
     assertEq(vesting.recipient(), newRecipient);
   }
 
+  function test_vesting_updateVestingAmount_revertsCannotUpdateAmount() public {
+    uint256 newAmount = 10_000_000e18;
+
+    // Warp past the start time so quarters() > 0
+    vm.warp(vesting.lastQuarterlyTimestamp() + QUARTERLY_SECONDS_ESTIMATE);
+
+    vm.prank(owner);
+    vm.expectRevert(IUNIVesting.CannotUpdateAmount.selector);
+    vesting.updateVestingAmount(newAmount);
+  }
+
   function test_vesting_updateVestingAmount_revertsUnauthorized() public {
     address unauthorized = makeAddr("unauthorized");
     uint256 newAmount = 10_000_000e18;
@@ -179,7 +190,7 @@ contract UNIVestingTest is Test {
     uint256 newAmount = 10_000_000e18;
 
     // Warp to after start time but before first quarter completes, so quarters() == 0
-    vm.warp(vesting.lastQuarterlyTimestamp() + QUARTERLY_SECONDS_ESTIMATE - 1);
+    vm.warp(JAN_1_2026);
 
     vm.prank(owner);
     vesting.updateVestingAmount(newAmount);
