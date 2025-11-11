@@ -27,23 +27,13 @@ interface IUNIVesting {
   /// @param recipient The new recipient address
   event RecipientUpdated(address recipient);
 
-  /// @notice The start time for vesting
-  /// @dev equivalent to January 1, 2026 00:00:00 UTC
-  /// @return uint256 start time as a Unix timestamp
-  function START_TIME() external view returns (uint256);
-
-  /// @notice The seconds elapsed in one quarter
-  /// @dev 7,776,000 seconds = 90 days
-  /// @return uint256 number of seconds in one quarter
-  function QUARTERLY_SECONDS() external view returns (uint256);
-
   /// @notice The UNI token contract
   /// @return ERC20 token being vested
   function UNI() external view returns (ERC20);
 
   /// @notice The maximum amount able to be transferred at each vesting period.
   /// @return uint256 quarterly vesting amount in wei
-  function QUARTERLY_VESTING_AMOUNT() external view returns (uint256);
+  function quarterlyVestingAmount() external view returns (uint256);
 
   /// @notice The recipient of the vested UNI.
   /// @return address of the recipient
@@ -52,7 +42,7 @@ interface IUNIVesting {
   /// @notice The last time the UNI was transferred, set to the closest quarter that has not fully
   /// vested.
   /// @return uint256 timestamp of the last withdrawal
-  function lastQuarterlyTimestamp() external view returns (uint256);
+  function lastQuarterlyTimestamp() external view returns (uint48);
 
   /// @notice Updates the quarterly vesting amount
   /// @param amount The new quarterly vesting amount in wei
@@ -76,6 +66,6 @@ interface IUNIVesting {
 
   /// @notice Calculates how many quarters have passed since the last withdrawal
   /// @dev Uses integer division, so partial quarters are not counted
-  /// @return uint256 number of complete quarters that have elapsed since lastQuarterlyTimestamp
-  function quarters() external view returns (uint256);
+  /// @return uint48 number of complete quarters that have elapsed since lastQuarterlyTimestamp
+  function quarters() external view returns (uint48);
 }
