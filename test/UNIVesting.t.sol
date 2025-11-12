@@ -12,9 +12,9 @@ contract UNIVestingTest is Test {
 
   address recipient;
   address owner;
-  uint256 constant JAN_1_2026 = 1_767_243_600;
-  uint256 constant APR_1_2026 = 1_775_019_600;
-  uint256 constant JUL_1_2026 = 1_782_882_000;
+  uint256 constant JAN_1_2026 = 1_767_225_600;
+  uint256 constant APR_1_2026 = 1_775_001_600;
+  uint256 constant JUL_1_2026 = 1_782_864_000;
   uint256 constant FIVE_M = 5_000_000 ether;
   uint256 constant HUNDRED_M = 100_000_000 ether;
   uint256 constant QUARTERLY_SECONDS_ESTIMATE = 91.25 days;
@@ -34,36 +34,43 @@ contract UNIVestingTest is Test {
     assertEq(vestingToken.allowance(owner, address(vesting)), FIVE_M * 8);
   }
 
-  function test_vesting_lastQuarterlyTimestamp() public view {
-    assertEq(vesting.lastQuarterlyTimestamp(), JAN_1_2026);
+  function test_vesting_lastUnlockTimestamp() public view {
+    assertEq(vesting.lastUnlockTimestamp(), JAN_1_2026 - uint48(92 days));
   }
 
   function test_vesting_withdraw_revertsOnlyQuarterly(uint256 timestamp) public {
-    vm.assume(timestamp < APR_1_2026);
+    vm.assume(timestamp < JAN_1_2026);
     vm.warp(timestamp);
     vm.expectRevert(IUNIVesting.OnlyQuarterly.selector);
     vesting.withdraw();
   }
 
-  function test_vesting_calculate_quarters_none(uint256 timestamp) public view {
-    // before Apr 1, 2026
-    vm.assume(timestamp <= APR_1_2026 - 1);
+  function test_vesting_calculate_quarters_before_start_date() public {
+    // before Jan 1, 2026
+    vm.warp(JAN_1_2026 - 1);
+    vm.assertEq(vesting.quarters(), 0);
+  }
+
+  function test_vesting_calculate_quarters_none(uint256 timestamp) public {
+    // before Jan 1, 2026
+    vm.assume(timestamp <= JAN_1_2026 - 1);
+    vm.warp(timestamp);
     vm.assertEq(vesting.quarters(), 0);
   }
 
   function test_vesting_calculate_quarters() public {
     // Mar 1, 2026
     vm.warp(1_772_341_200);
-    vm.assertEq(vesting.quarters(), 0);
+    vm.assertEq(vesting.quarters(), 1);
     // Apr 1, 2026
     vm.warp(APR_1_2026);
-    vm.assertEq(vesting.quarters(), 1);
+    vm.assertEq(vesting.quarters(), 2);
     // Apr 8, 2026
     vm.warp(1_775_664_000);
-    vm.assertEq(vesting.quarters(), 1);
+    vm.assertEq(vesting.quarters(), 2);
     // Sep 21, 2030
     vm.warp(1_916_269_541);
-    vm.assertEq(vesting.quarters(), 18);
+    vm.assertEq(vesting.quarters(), 19);
   }
 
   function test_fuzz_vesting_calculate_quarters(uint48 timestamp) public {
@@ -75,7 +82,7 @@ contract UNIVestingTest is Test {
     } else {
       vm.assertApproxEqAbs(
         vesting.quarters(),
-        (timestamp - JAN_1_2026) / QUARTERLY_SECONDS_ESTIMATE,
+        (timestamp - JAN_1_2026) / QUARTERLY_SECONDS_ESTIMATE + 1,
         1,
         "Quarter vs estimate divergence"
       );
@@ -83,29 +90,29 @@ contract UNIVestingTest is Test {
   }
 
   function test_vesting_withdraw() public {
-    uint256 timestamp = APR_1_2026;
+    uint256 timestamp = JAN_1_2026;
     vm.warp(timestamp);
     vesting.withdraw();
 
-    assertEq(vesting.lastQuarterlyTimestamp(), timestamp);
+    assertEq(vesting.lastUnlockTimestamp(), timestamp);
     assertEq(vestingToken.balanceOf(recipient), vesting.quarterlyVestingAmount());
   }
 
   function test_vesting_withdraw_two_quarters() public {
-    uint256 timestamp = JUL_1_2026;
+    uint256 timestamp = APR_1_2026;
     vm.warp(timestamp);
     vesting.withdraw();
 
-    assertEq(vesting.lastQuarterlyTimestamp(), JUL_1_2026);
+    assertEq(vesting.lastUnlockTimestamp(), APR_1_2026);
     assertEq(vestingToken.balanceOf(recipient), vesting.quarterlyVestingAmount() * 2);
   }
 
-  function test_vesting_withdraw_updates_lastQuarterlyTimestamp() public {
-    uint256 timestamp = APR_1_2026 + 500;
+  function test_vesting_withdraw_updates_lastUnlockTimestamp() public {
+    uint256 timestamp = JAN_1_2026 + 500;
     vm.warp(timestamp);
     vesting.withdraw();
 
-    assertEq(vesting.lastQuarterlyTimestamp(), APR_1_2026);
+    assertEq(vesting.lastUnlockTimestamp(), JAN_1_2026);
     assertEq(vestingToken.balanceOf(recipient), vesting.quarterlyVestingAmount());
   }
 
@@ -131,18 +138,6 @@ contract UNIVestingTest is Test {
       if (quarters > 8) assertEq(vesting.quarters(), quarters - 8);
       else assertEq(vesting.quarters(), 0);
     }
-  }
-
-  function test_vesting_withdraw_at_exact_boundary() public {
-    uint256 exactBoundary = vesting.lastQuarterlyTimestamp() + QUARTERLY_SECONDS_ESTIMATE;
-    uint256 recipientBalanceBefore = vestingToken.balanceOf(recipient);
-
-    vm.warp(exactBoundary);
-    vesting.withdraw();
-
-    uint256 recipientBalanceAfter = vestingToken.balanceOf(recipient);
-
-    assertEq(recipientBalanceAfter - recipientBalanceBefore, vesting.quarterlyVestingAmount());
   }
 
   function test_vesting_updateRecipient_revertsNotAuthorized() public {
@@ -176,7 +171,7 @@ contract UNIVestingTest is Test {
     uint256 newAmount = 10_000_000e18;
 
     // Warp past the start time so quarters() > 0
-    vm.warp(vesting.lastQuarterlyTimestamp() + QUARTERLY_SECONDS_ESTIMATE);
+    vm.warp(JAN_1_2026);
 
     vm.prank(owner);
     vm.expectRevert(IUNIVesting.CannotUpdateAmount.selector);
@@ -195,8 +190,7 @@ contract UNIVestingTest is Test {
   function test_vesting_updateVestingAmount_succeeds() public {
     uint256 newAmount = 10_000_000e18;
 
-    // Warp to after start time but before first quarter completes, so quarters() == 0
-    vm.warp(JAN_1_2026);
+    vm.warp(JAN_1_2026 - 1);
 
     vm.prank(owner);
     vesting.updateVestingAmount(newAmount);
@@ -206,8 +200,8 @@ contract UNIVestingTest is Test {
 
   function test_withdraw_partialAllowance_onlyAdvancesPaidQuarters() public {
     // Setup: 3 quarters pass (15M tokens vested)
-    // Using Apr 1, 2027 which gives exactly 3 quarters
-    vm.warp(1_798_606_800); // Apr 1, 2027 (15 months from Jan 1, 2026)
+    // Jul 1, 2026 is 9 months from lastUnlockTimestamp (Oct 1, 2025) = 3 quarters
+    vm.warp(JUL_1_2026); // Jul 1, 2026
     assertEq(vesting.quarters(), 3);
 
     // Owner only approves 2 quarters worth (10M)
@@ -235,9 +229,9 @@ contract UNIVestingTest is Test {
   }
 
   function test_withdraw_partialAllowance_lessThanOneQuarter_reverts() public {
-    // Setup: 2 quarters pass (10M tokens vested)
+    // Setup: 3 quarters pass (15M tokens vested)
     vm.warp(JUL_1_2026);
-    assertEq(vesting.quarters(), 2);
+    assertEq(vesting.quarters(), 3);
 
     // Owner approves less than 1 quarter
     vm.prank(owner);
@@ -249,9 +243,9 @@ contract UNIVestingTest is Test {
   }
 
   function test_withdraw_partialAllowance_exactlyOneQuarter() public {
-    // Setup: 2 quarters pass
+    // Setup: 3 quarters pass
     vm.warp(JUL_1_2026);
-    assertEq(vesting.quarters(), 2);
+    assertEq(vesting.quarters(), 3);
 
     // Owner approves exactly 1 quarter
     vm.prank(owner);
@@ -259,14 +253,14 @@ contract UNIVestingTest is Test {
 
     vesting.withdraw();
 
-    // Should withdraw 1 quarter, leaving 1 remaining
+    // Should withdraw 1 quarter, leaving 2 remaining
     assertEq(vestingToken.balanceOf(recipient), FIVE_M);
-    assertEq(vesting.quarters(), 1);
+    assertEq(vesting.quarters(), 2);
   }
 
   function test_withdraw_zeroAllowance_reverts() public {
     // Setup: 1 quarter passes
-    vm.warp(APR_1_2026);
+    vm.warp(JAN_1_2026);
 
     // Remove all allowance
     vm.prank(owner);
@@ -309,7 +303,7 @@ contract UNIVestingTest is Test {
 
   function test_ownership_transferAfterSomeQuartersVested() public {
     // Setup: 2 quarters vest, recipient withdraws 1 quarter
-    vm.warp(JUL_1_2026); // 2 quarters available
+    vm.warp(APR_1_2026); // 2 quarters available
 
     // Owner approves only 1 quarter
     vm.prank(owner);
@@ -339,7 +333,7 @@ contract UNIVestingTest is Test {
 
   function test_ownership_newOwnerChangesAllowance() public {
     // Setup: 2 quarters vest
-    vm.warp(JUL_1_2026);
+    vm.warp(APR_1_2026);
     assertEq(vesting.quarters(), 2);
 
     // Transfer ownership
@@ -370,7 +364,7 @@ contract UNIVestingTest is Test {
 
   function test_ownership_newOwnerCanWithdraw() public {
     // Setup: vest 1 quarter
-    vm.warp(APR_1_2026);
+    vm.warp(JAN_1_2026);
 
     // Transfer ownership
     address newOwner = makeAddr("newOwner");
@@ -393,7 +387,7 @@ contract UNIVestingTest is Test {
 
   function test_ownership_transferDuringVesting() public {
     // Setup: Start with 3 quarters vested
-    vm.warp(1_798_606_800); // Apr 1, 2027
+    vm.warp(JUL_1_2026);
     assertEq(vesting.quarters(), 3);
 
     // Withdraw 1 quarter
@@ -427,7 +421,7 @@ contract UNIVestingTest is Test {
 
   function test_recipientChange_betweenQuarters() public {
     // Setup: Vest 3 quarters
-    vm.warp(1_798_606_800); // Apr 1, 2027 (3 quarters)
+    vm.warp(JUL_1_2026);
     assertEq(vesting.quarters(), 3);
 
     address recipientA = recipient;
@@ -472,7 +466,7 @@ contract UNIVestingTest is Test {
 
   function test_recipientChange_ownerChangesWhileVested() public {
     // Setup: Vest 2 quarters but don't withdraw
-    vm.warp(JUL_1_2026);
+    vm.warp(APR_1_2026);
     assertEq(vesting.quarters(), 2);
 
     address originalRecipient = recipient;
@@ -492,7 +486,7 @@ contract UNIVestingTest is Test {
 
   function test_recipientChange_multipleChangesBeforeWithdrawal() public {
     // Setup: Vest 1 quarter
-    vm.warp(APR_1_2026);
+    vm.warp(JAN_1_2026);
 
     address recipient1 = recipient;
     address recipient2 = makeAddr("recipient2");

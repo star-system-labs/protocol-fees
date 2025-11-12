@@ -39,10 +39,9 @@ interface IUNIVesting {
   /// @return address of the recipient
   function recipient() external view returns (address);
 
-  /// @notice The last time the UNI was transferred, set to the closest quarter that has not fully
-  /// vested.
+  /// @notice The last time a quarterly UNI disbursement was unlocked
   /// @return uint256 timestamp of the last withdrawal
-  function lastQuarterlyTimestamp() external view returns (uint48);
+  function lastUnlockTimestamp() external view returns (uint48);
 
   /// @notice Updates the quarterly vesting amount
   /// @param amount The new quarterly vesting amount in wei

@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 pragma solidity ^0.8.29;
 
+import {console2} from "forge-std/console2.sol";
 import {
   BokkyPooBahsDateTimeLibrary as DateTime
 } from "BokkyPooBahsDateTimeLibrary/contracts/BokkyPooBahsDateTimeLibrary.sol";
@@ -20,6 +21,9 @@ contract UNIVesting is Owned, IUNIVesting {
   /// @notice Number of months in a quarter
   uint256 private constant MONTHS_PER_QUARTER = 3;
 
+  /// @dev equivalent to January 1, 2026 00:00:00 UTC
+  uint256 private constant FIRST_UNLOCK_TIMESTAMP = 1_767_225_600;
+
   /// @inheritdoc IUNIVesting
   ERC20 public immutable UNI;
 
@@ -30,8 +34,7 @@ contract UNIVesting is Owned, IUNIVesting {
   address public recipient;
 
   /// @inheritdoc IUNIVesting
-  /// @dev equivalent to January 1, 2026 00:00:00 UTC
-  uint48 public lastQuarterlyTimestamp = 1_767_243_600;
+  uint48 public lastUnlockTimestamp;
 
   /// @notice Restricts function access to either the contract owner or the recipient
   /// @dev Reverts with NotAuthorized if caller is neither owner nor recipient
@@ -48,6 +51,8 @@ contract UNIVesting is Owned, IUNIVesting {
   constructor(address _uni, address _recipient) Owned(msg.sender) {
     UNI = ERC20(_uni);
     recipient = _recipient;
+    // set the quarterly timestamp such that the first unlock occurs on FIRST_UNLOCK_TIMESTAMP
+    lastUnlockTimestamp = uint48(DateTime.subMonths(FIRST_UNLOCK_TIMESTAMP, MONTHS_PER_QUARTER));
   }
 
   /// @inheritdoc IUNIVesting
@@ -91,17 +96,16 @@ contract UNIVesting is Owned, IUNIVesting {
 
       // Only advance timestamp by the quarters we're actually paying out
       // This ensures remaining quarters can be withdrawn later when allowance increases
-      lastQuarterlyTimestamp = uint48(
-        DateTime.addMonths(lastQuarterlyTimestamp, withdrawableQuarters * MONTHS_PER_QUARTER)
-      );
+      lastUnlockTimestamp =
+        uint48(DateTime.addMonths(lastUnlockTimestamp, withdrawableQuarters * MONTHS_PER_QUARTER));
 
       uint256 transferAmount = quarterlyVestingAmount * uint256(withdrawableQuarters);
       UNI.safeTransferFrom(owner, recipient, transferAmount);
     } else {
       // Full withdrawal path: sufficient allowance for all vested quarters
       // Advance timestamp by all quarters that have vested
-      lastQuarterlyTimestamp =
-        uint48(DateTime.addMonths(lastQuarterlyTimestamp, quartersPassed * MONTHS_PER_QUARTER));
+      lastUnlockTimestamp =
+        uint48(DateTime.addMonths(lastUnlockTimestamp, quartersPassed * MONTHS_PER_QUARTER));
 
       UNI.safeTransferFrom(owner, recipient, vestedAmount);
     }
@@ -111,8 +115,8 @@ contract UNIVesting is Owned, IUNIVesting {
   /// @dev Uses calendar-based quarters (3 months each)
   /// Returns 0 if no quarters have passed since last withdrawal.
   function quarters() public view returns (uint48 quartersPassed) {
-    if (block.timestamp < lastQuarterlyTimestamp) return 0;
+    if (block.timestamp < lastUnlockTimestamp) return 0;
     quartersPassed =
-      uint48(DateTime.diffMonths(lastQuarterlyTimestamp, block.timestamp) / MONTHS_PER_QUARTER);
+      uint48(DateTime.diffMonths(lastUnlockTimestamp, block.timestamp) / MONTHS_PER_QUARTER);
   }
 }
