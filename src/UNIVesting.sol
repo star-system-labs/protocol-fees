@@ -71,18 +71,30 @@ contract UNIVesting is Owned, IUNIVesting {
     uint48 quartersPassed = quarters();
     // assert at least one quarter has passed else no withdraw is available
     require(quartersPassed > 0, OnlyQuarterly());
-    /// Note that this timestamp might be in the past, but it should never be more than a quarter
-    /// behind. This allows collection exactly at the start of a quarter.
-    lastQuarterlyTimestamp =
-      uint48(DateTime.addMonths(lastQuarterlyTimestamp, quartersPassed * MONTHS_PER_QUARTER));
 
     uint256 vestedAmount = quarterlyVestingAmount * uint256(quartersPassed);
-    // use the minimum of the allowance or the vestedAmount to avoid locked vested assets
-    // if allowance has not been increased
-    uint256 transferAmount = UNI.allowance(owner, address(this)) < vestedAmount
-      ? UNI.allowance(owner, address(this))
-      : vestedAmount;
-    UNI.safeTransferFrom(owner, recipient, transferAmount);
+    uint256 currentAllowance = UNI.allowance(owner, address(this));
+
+    if (currentAllowance < vestedAmount) {
+      // Partial withdrawal - calculate how many quarters we can actually withdraw
+      uint48 withdrawableQuarters = uint48(currentAllowance / quarterlyVestingAmount);
+
+      require(withdrawableQuarters > 0, InsufficientAllowance());
+
+      // Only advance by the quarters we can actually pay
+      lastQuarterlyTimestamp = uint48(
+        DateTime.addMonths(lastQuarterlyTimestamp, withdrawableQuarters * MONTHS_PER_QUARTER)
+      );
+
+      uint256 transferAmount = quarterlyVestingAmount * uint256(withdrawableQuarters);
+      UNI.safeTransferFrom(owner, recipient, transferAmount);
+    } else {
+      // Full withdrawal - advance by all vested quarters
+      lastQuarterlyTimestamp =
+        uint48(DateTime.addMonths(lastQuarterlyTimestamp, quartersPassed * MONTHS_PER_QUARTER));
+
+      UNI.safeTransferFrom(owner, recipient, vestedAmount);
+    }
   }
 
   /// @inheritdoc IUNIVesting

@@ -15,6 +15,9 @@ interface IUNIVesting {
   /// @notice Thrown when trying to transfer UNI more frequently than once a quarter.
   error OnlyQuarterly();
 
+  /// @notice Thrown when trying to withdraw but the owner has not approved enough UNI tokens.
+  error InsufficientAllowance();
+
   /// @notice Thrown when trying to update the vesting amount while tokens are available to
   /// withdraw.
   error CannotUpdateAmount();

@@ -114,16 +114,23 @@ contract UNIVestingTest is Test {
     // assume less than jan 1 2100, when the first 100 year leap skip
     vm.assume(timestamp < 4_102_462_800);
     vm.warp(timestamp);
-    if (timestamp < APR_1_2026) {
+
+    uint256 quarters = vesting.quarters();
+
+    if (quarters == 0) {
       vm.expectRevert(IUNIVesting.OnlyQuarterly.selector);
       vesting.withdraw();
-    } else if (timestamp < 1_838_174_400) {
-      uint256 quarters = vesting.quarters();
-      vesting.withdraw();
-      assertEq(vestingToken.balanceOf(recipient), quarters * vesting.quarterlyVestingAmount());
     } else {
+      // The setup only approves 8 quarters worth (40M)
+      uint256 expectedWithdrawal = quarters > 8 ? 8 : quarters;
       vesting.withdraw();
-      assertEq(vestingToken.balanceOf(recipient), vesting.quarterlyVestingAmount() * 8);
+      assertEq(
+        vestingToken.balanceOf(recipient), expectedWithdrawal * vesting.quarterlyVestingAmount()
+      );
+
+      // If more than 8 quarters vested, there should be remaining quarters
+      if (quarters > 8) assertEq(vesting.quarters(), quarters - 8);
+      else assertEq(vesting.quarters(), 0);
     }
   }
 
@@ -196,5 +203,108 @@ contract UNIVestingTest is Test {
     vesting.updateVestingAmount(newAmount);
 
     assertEq(vesting.quarterlyVestingAmount(), newAmount);
+  }
+
+  function test_withdraw_partialAllowance_onlyAdvancesPaidQuarters() public {
+    // Setup: 3 quarters pass (15M tokens vested)
+    // Using Apr 1, 2027 which gives exactly 3 quarters
+    vm.warp(1_798_606_800); // Apr 1, 2027 (15 months from Jan 1, 2026)
+    assertEq(vesting.quarters(), 3);
+
+    // Owner only approves 2 quarters worth (10M)
+    vm.prank(owner);
+    vestingToken.approve(address(vesting), FIVE_M * 2);
+
+    vesting.withdraw();
+
+    // Recipient gets 10M (2 quarters worth)
+    assertEq(vestingToken.balanceOf(recipient), FIVE_M * 2);
+
+    // Timestamp only advances by 2 quarters, not 3
+    // So there should still be 1 quarter remaining
+    assertEq(vesting.quarters(), 1);
+
+    // Now increase allowance and withdraw the remaining quarter
+    vm.prank(owner);
+    vestingToken.approve(address(vesting), FIVE_M);
+
+    vesting.withdraw();
+
+    // Total should now be 15M (3 quarters)
+    assertEq(vestingToken.balanceOf(recipient), FIVE_M * 3);
+    assertEq(vesting.quarters(), 0);
+  }
+
+  function test_withdraw_partialAllowance_lessThanOneQuarter_reverts() public {
+    // Setup: 2 quarters pass (10M tokens vested)
+    vm.warp(JUL_1_2026);
+    assertEq(vesting.quarters(), 2);
+
+    // Owner approves less than 1 quarter
+    vm.prank(owner);
+    vestingToken.approve(address(vesting), FIVE_M - 1);
+
+    // Should revert with insufficient allowance message
+    vm.expectRevert(IUNIVesting.InsufficientAllowance.selector);
+    vesting.withdraw();
+  }
+
+  function test_withdraw_partialAllowance_exactlyOneQuarter() public {
+    // Setup: 2 quarters pass
+    vm.warp(JUL_1_2026);
+    assertEq(vesting.quarters(), 2);
+
+    // Owner approves exactly 1 quarter
+    vm.prank(owner);
+    vestingToken.approve(address(vesting), FIVE_M);
+
+    vesting.withdraw();
+
+    // Should withdraw 1 quarter, leaving 1 remaining
+    assertEq(vestingToken.balanceOf(recipient), FIVE_M);
+    assertEq(vesting.quarters(), 1);
+  }
+
+  function test_withdraw_zeroAllowance_reverts() public {
+    // Setup: 1 quarter passes
+    vm.warp(APR_1_2026);
+
+    // Remove all allowance
+    vm.prank(owner);
+    vestingToken.approve(address(vesting), 0);
+
+    // Should revert
+    vm.expectRevert(IUNIVesting.InsufficientAllowance.selector);
+    vesting.withdraw();
+  }
+
+  function test_withdraw_sequentialPartialWithdrawals() public {
+    // Setup: 5 quarters pass (25M tokens vested)
+    // Using Jan 1, 2028 which gives exactly 8 quarters (24 months from Jan 1, 2026)
+    // We'll test with 5 quarters of partial withdrawals
+    vm.warp(1_830_315_600); // Jan 1, 2028 (24 months = 8 quarters from Jan 1, 2026)
+    uint256 totalQuarters = vesting.quarters();
+    assertGe(totalQuarters, 5); // At least 5 quarters available
+
+    // First withdrawal: approve and withdraw 2 quarters
+    vm.prank(owner);
+    vestingToken.approve(address(vesting), FIVE_M * 2);
+    vesting.withdraw();
+    assertEq(vestingToken.balanceOf(recipient), FIVE_M * 2);
+    assertEq(vesting.quarters(), totalQuarters - 2);
+
+    // Second withdrawal: approve and withdraw 1 quarter
+    vm.prank(owner);
+    vestingToken.approve(address(vesting), FIVE_M);
+    vesting.withdraw();
+    assertEq(vestingToken.balanceOf(recipient), FIVE_M * 3);
+    assertEq(vesting.quarters(), totalQuarters - 3);
+
+    // Third withdrawal: approve and withdraw 2 more quarters (total 5)
+    vm.prank(owner);
+    vestingToken.approve(address(vesting), FIVE_M * 2);
+    vesting.withdraw();
+    assertEq(vestingToken.balanceOf(recipient), FIVE_M * 5);
+    assertEq(vesting.quarters(), totalQuarters - 5);
   }
 }
