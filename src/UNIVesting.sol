@@ -11,9 +11,9 @@ import {IUNIVesting} from "./interfaces/IUNIVesting.sol";
 
 /// @title UNIVesting
 /// @notice A vesting contract that releases UNI tokens quarterly to a designated recipient
-/// @dev The contract starts vesting on January 1, 2026 and allows withdrawals every calendar
-/// quarter. The owner must maintain an ERC20 allowance for the contract to transfer UNI tokens.
-/// Supports partial withdrawals when allowance is less than vested amount.
+/// @dev The contract unlocks its first tranche on Jan 1, 2026 and allows withdrawals every calendar
+/// quarter thereafter. The owner must maintain an ERC20 allowance for the contract to transfer UNI
+/// tokens. Supports partial withdrawals when allowance is less than vested amount.
 contract UNIVesting is Owned, IUNIVesting {
   using SafeTransferLib for ERC20;
 
@@ -98,16 +98,14 @@ contract UNIVesting is Owned, IUNIVesting {
       lastUnlockTimestamp =
         uint48(DateTime.addMonths(lastUnlockTimestamp, withdrawableQuarters * MONTHS_PER_QUARTER));
 
-      uint256 transferAmount = quarterlyVestingAmount * uint256(withdrawableQuarters);
-      UNI.safeTransferFrom(owner, recipient, transferAmount);
+      vestedAmount = quarterlyVestingAmount * uint256(withdrawableQuarters);
     } else {
       // Full withdrawal path: sufficient allowance for all vested quarters
       // Advance timestamp by all quarters that have vested
       lastUnlockTimestamp =
         uint48(DateTime.addMonths(lastUnlockTimestamp, quartersPassed * MONTHS_PER_QUARTER));
-
-      UNI.safeTransferFrom(owner, recipient, vestedAmount);
     }
+    UNI.safeTransferFrom(owner, recipient, vestedAmount);
   }
 
   /// @inheritdoc IUNIVesting
