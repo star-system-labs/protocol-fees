@@ -44,7 +44,7 @@ contract DeployerTest is Test {
 
     tokenJar = deployer.TOKEN_JAR();
     releaser = deployer.RELEASER();
-    feeAdapter = deployer.FEE_ADAPTER();
+    feeAdapter = deployer.V3_FEE_ADAPTER();
   }
 
   function test_deployer_tokenJar_setUp() public view {

@@ -13,7 +13,7 @@ import {IUniswapV3Factory} from "v3-core/contracts/interfaces/IUniswapV3Factory.
 contract Deployer {
   ITokenJar public immutable TOKEN_JAR;
   IReleaser public immutable RELEASER;
-  IV3FeeAdapter public immutable FEE_ADAPTER;
+  IV3FeeAdapter public immutable V3_FEE_ADAPTER;
 
   address public constant RESOURCE = 0x1f9840a85d5aF5bf1D1762F925BDADdC4201F984;
   uint256 public constant THRESHOLD = 10_000e18;
@@ -29,9 +29,9 @@ contract Deployer {
   uint8 constant DEFAULT_FEE_3000 = 6 << 4 | 6; // default fee for 0.3% tier
   uint8 constant DEFAULT_FEE_10000 = 6 << 4 | 6; // default fee for 1% tier
 
-  bytes32 constant SALT_TOKEN_JAR = 0;
-  bytes32 constant SALT_RELEASER = 0;
-  bytes32 constant SALT_FEE_ADAPTER = 0;
+  bytes32 constant SALT_TOKEN_JAR = bytes32(uint256(1));
+  bytes32 constant SALT_RELEASER = bytes32(uint256(2));
+  bytes32 constant SALT_V3_FEE_ADAPTER = bytes32(uint256(3));
 
   //// TOKEN JAR:
   /// 1. Deploy the TokenJar
@@ -43,11 +43,17 @@ contract Deployer {
   /// 5. Update the thresholdSetter on the releaser to the owner.
   /// 6. Update the owner on the releaser.
 
-  /// FEE_ADAPTER:
+  /// FEE_ADAPTER
   /// 7. Deploy the FeeAdapter.
   /// 8. Update the feeSetter to the owner.
   /// 9. Store fee tiers.
   /// 10. Update the owner on the fee adapter.
+  /// 8. Set this contract as the feeSetter
+  /// 9. Set initial merkle root
+  /// 10. Set default fees
+  /// 11. Update the feeSetter to the owner.
+  /// 12. Store fee tiers.
+  /// 13. Update the owner on the fee adapter.
   constructor() {
     address owner = V3_FACTORY.owner();
     /// 1. Deploy the TokenJar.
@@ -65,18 +71,31 @@ contract Deployer {
     IOwned(address(RELEASER)).transferOwnership(owner);
 
     /// 7. Deploy the FeeAdapter.
-    FEE_ADAPTER = new V3FeeAdapter{salt: SALT_FEE_ADAPTER}(address(V3_FACTORY), address(TOKEN_JAR));
+    V3_FEE_ADAPTER =
+      new V3FeeAdapter{salt: SALT_V3_FEE_ADAPTER}(address(V3_FACTORY), address(TOKEN_JAR));
 
-    /// 8. Update the feeSetter to the owner.
-    FEE_ADAPTER.setFeeSetter(owner);
+    /// 8. Set this contract as the feeSetter
+    V3_FEE_ADAPTER.setFeeSetter(address(this));
 
-    /// 9. Store fee tiers.
-    FEE_ADAPTER.storeFeeTier(100);
-    FEE_ADAPTER.storeFeeTier(500);
-    FEE_ADAPTER.storeFeeTier(3000);
-    FEE_ADAPTER.storeFeeTier(10_000);
+    /// 9. Set initial merkle root
+    V3_FEE_ADAPTER.setMerkleRoot(INITIAL_MERKLE_ROOT);
 
-    /// 10. Update the owner on the fee adapter.
-    IOwned(address(FEE_ADAPTER)).transferOwnership(owner);
+    /// 10. Set default fees
+    V3_FEE_ADAPTER.setDefaultFeeByFeeTier(100, DEFAULT_FEE_100);
+    V3_FEE_ADAPTER.setDefaultFeeByFeeTier(500, DEFAULT_FEE_500);
+    V3_FEE_ADAPTER.setDefaultFeeByFeeTier(3000, DEFAULT_FEE_3000);
+    V3_FEE_ADAPTER.setDefaultFeeByFeeTier(10_000, DEFAULT_FEE_10000);
+
+    /// 11. Update the feeSetter to the owner.
+    V3_FEE_ADAPTER.setFeeSetter(owner);
+
+    /// 12. Store fee tiers.
+    V3_FEE_ADAPTER.storeFeeTier(100);
+    V3_FEE_ADAPTER.storeFeeTier(500);
+    V3_FEE_ADAPTER.storeFeeTier(3000);
+    V3_FEE_ADAPTER.storeFeeTier(10_000);
+
+    /// 13. Update the owner on the fee adapter.
+    IOwned(address(V3_FEE_ADAPTER)).transferOwnership(owner);
   }
 }

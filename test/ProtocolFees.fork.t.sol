@@ -19,6 +19,7 @@ import {Currency} from "v4-core/types/Currency.sol";
 import {IUniswapV2Factory} from "./interfaces/IUniswapV2Factory.sol";
 import {IUniswapV2Pair} from "./interfaces/IUniswapV2Pair.sol";
 import {IUniswapV2Router02} from "./interfaces/IUniswapV2Router02.sol";
+import {UnificationProposal} from "../script/01_UnificationProposal.s.sol";
 
 contract ProtocolFeesForkTest is Test {
   using FixedPointMathLib for uint256;
@@ -61,19 +62,13 @@ contract ProtocolFeesForkTest is Test {
     owner = factory.owner();
 
     deployer = new Deployer();
+    UnificationProposal proposal = new UnificationProposal();
+    proposal.runPranked(deployer);
     tokenJar = deployer.TOKEN_JAR();
     releaser = deployer.RELEASER();
-    feeAdapter = deployer.FEE_ADAPTER();
+    feeAdapter = deployer.V3_FEE_ADAPTER();
 
     merkle = new Merkle();
-
-    // set the fee adapter on the v3 factory
-    vm.prank(owner);
-    factory.setOwner(address(feeAdapter));
-
-    // assumes governance timelock takes back control of the feeSetter
-    vm.prank(owner);
-    IFeeToSetter(0x18e433c7Bf8A2E1d0197CE5d8f9AFAda1A771360).setFeeToSetter(owner);
 
     // USDC-WETH pools
     pool0 = factory.getPool(WETH, USDC, 100); // 1 bip pool
@@ -95,13 +90,6 @@ contract ProtocolFeesForkTest is Test {
 
   function test_enableFeeV3() public {
     assertEq(feeAdapter.feeSetter(), owner);
-    vm.startPrank(owner);
-    feeAdapter.setDefaultFeeByFeeTier(100, 10 << 4 | 10);
-    feeAdapter.setDefaultFeeByFeeTier(500, 8 << 4 | 8);
-    feeAdapter.setDefaultFeeByFeeTier(3000, 6 << 4 | 6);
-    feeAdapter.setDefaultFeeByFeeTier(10_000, 4 << 4 | 4);
-    vm.stopPrank();
-
     // Generate merkle root from leaves
     bytes32 targetLeaf = _hashLeaf(USDC, WETH);
     bytes32 dummyLeaf = _hashLeaf(address(0), address(1));
@@ -130,12 +118,6 @@ contract ProtocolFeesForkTest is Test {
 
   function test_enableFeeV3MultiProof() public {
     assertEq(feeAdapter.feeSetter(), owner);
-    vm.startPrank(owner);
-    feeAdapter.setDefaultFeeByFeeTier(100, 10 << 4 | 10);
-    feeAdapter.setDefaultFeeByFeeTier(500, 8 << 4 | 8);
-    feeAdapter.setDefaultFeeByFeeTier(3000, 6 << 4 | 6);
-    feeAdapter.setDefaultFeeByFeeTier(10_000, 4 << 4 | 4);
-    vm.stopPrank();
 
     // Using the real merkle root from the generated merkle tree
     bytes32 merkleRoot = hex"472c8960ea78de635eb7e32c5085f9fb963e626b5a68c939bfad24e022383b3a";
