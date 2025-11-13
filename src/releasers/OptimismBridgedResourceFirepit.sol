@@ -6,10 +6,6 @@ import {IL2StandardBridge} from "../interfaces/external/IL2StandardBridge.sol";
 import {Currency} from "v4-core/types/Currency.sol";
 import {ERC20} from "solmate/src/tokens/ERC20.sol";
 import {SafeTransferLib} from "solmate/src/utils/SafeTransferLib.sol";
-import {ResourceManager} from "../base/ResourceManager.sol";
-import {Nonce} from "../base/Nonce.sol";
-import {ITokenJar} from "../interfaces/ITokenJar.sol";
-import {IReleaser} from "../interfaces/IReleaser.sol";
 import {ExchangeReleaser} from "./ExchangeReleaser.sol";
 
 /// @title OptimismBridgedResourceFirepit
