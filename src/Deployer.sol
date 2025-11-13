@@ -1,22 +1,19 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 pragma solidity ^0.8.29;
 
-import {V3FeeController} from "./feeControllers/V3FeeController.sol";
-import {IAssetSink} from "./interfaces/IAssetSink.sol";
-import {AssetSink} from "./AssetSink.sol";
+import {V3FeeAdapter} from "./feeAdapters/V3FeeAdapter.sol";
+import {ITokenJar} from "./interfaces/ITokenJar.sol";
+import {TokenJar} from "./TokenJar.sol";
 import {Firepit} from "./releasers/Firepit.sol";
-import {UNIMinter} from "./UNIMinter.sol";
 import {IReleaser} from "./interfaces/IReleaser.sol";
-import {IV3FeeController} from "./interfaces/IV3FeeController.sol";
-import {IUNIMinter} from "./interfaces/IUNIMinter.sol";
+import {IV3FeeAdapter} from "./interfaces/IV3FeeAdapter.sol";
 import {IOwned} from "./interfaces/base/IOwned.sol";
 import {IUniswapV3Factory} from "v3-core/contracts/interfaces/IUniswapV3Factory.sol";
 
 contract Deployer {
-  IAssetSink public immutable ASSET_SINK;
+  ITokenJar public immutable TOKEN_JAR;
   IReleaser public immutable RELEASER;
-  IV3FeeController public immutable FEE_CONTROLLER;
-  IUNIMinter public immutable UNI_MINTER;
+  IV3FeeAdapter public immutable FEE_ADAPTER;
 
   address public constant RESOURCE = 0x1f9840a85d5aF5bf1D1762F925BDADdC4201F984;
   uint256 public constant THRESHOLD = 10_000e18;
@@ -32,77 +29,54 @@ contract Deployer {
   uint8 constant DEFAULT_FEE_3000 = 6 << 4 | 6; // default fee for 0.3% tier
   uint8 constant DEFAULT_FEE_10000 = 6 << 4 | 6; // default fee for 1% tier
 
-  bytes32 constant SALT_ASSET_SINK = bytes32(uint256(1));
-  bytes32 constant SALT_RELEASER = bytes32(uint256(2));
-  bytes32 constant SALT_FEE_CONTROLLER = bytes32(uint256(3));
+  bytes32 constant SALT_TOKEN_JAR = 0;
+  bytes32 constant SALT_RELEASER = 0;
+  bytes32 constant SALT_FEE_ADAPTER = 0;
 
-  //// ASSET SINK:
-  /// 1. Deploy the AssetSink
-  /// 3. Set the releaser on the asset sink.
-  /// 4. Update the owner on the asset sink.
+  //// TOKEN JAR:
+  /// 1. Deploy the TokenJar
+  /// 3. Set the releaser on the token jar.
+  /// 4. Update the owner on the token jar.
 
   /// RELEASER:
   /// 2. Deploy the Releaser.
   /// 5. Update the thresholdSetter on the releaser to the owner.
   /// 6. Update the owner on the releaser.
 
-  /// FEE_CONTROLLER:
-  /// 7. Deploy the FeeController.
-  /// 8. Set this contract as the feeSetter
-  /// 9. Set initial merkle root
-  /// 10. Set default fees
-  /// 11. Update the feeSetter to the owner.
-  /// 12. Store fee tiers.
-  /// 13. Update the owner on the fee controller.
-
-  /// UNIMinter
-  /// 14. Deploy the UNIMinter
-  ///   - To enable the UNIMinter, the owner must call `setMinter` on the UNI contract
+  /// FEE_ADAPTER:
+  /// 7. Deploy the FeeAdapter.
+  /// 8. Update the feeSetter to the owner.
+  /// 9. Store fee tiers.
+  /// 10. Update the owner on the fee adapter.
   constructor() {
     address owner = V3_FACTORY.owner();
-    /// 1. Deploy the AssetSink.
-    ASSET_SINK = new AssetSink{salt: SALT_ASSET_SINK}();
+    /// 1. Deploy the TokenJar.
+    TOKEN_JAR = new TokenJar{salt: SALT_TOKEN_JAR}();
     /// 2. Deploy the Releaser.
-    RELEASER = new Firepit{salt: SALT_RELEASER}(RESOURCE, THRESHOLD, address(ASSET_SINK));
-    /// 3. Set the releaser on the asset sink.
-    ASSET_SINK.setReleaser(address(RELEASER));
-    /// 4. Update the owner on the asset sink.
-    IOwned(address(ASSET_SINK)).transferOwnership(owner);
+    RELEASER = new Firepit{salt: SALT_RELEASER}(RESOURCE, THRESHOLD, address(TOKEN_JAR));
+    /// 3. Set the releaser on the token jar.
+    TOKEN_JAR.setReleaser(address(RELEASER));
+    /// 4. Update the owner on the token jar.
+    IOwned(address(TOKEN_JAR)).transferOwnership(owner);
 
     /// 5. Update the thresholdSetter on the releaser to the owner.
     RELEASER.setThresholdSetter(owner);
     /// 6. Update the owner on the releaser.
     IOwned(address(RELEASER)).transferOwnership(owner);
 
-    /// 7. Deploy the FeeController.
-    FEE_CONTROLLER =
-      new V3FeeController{salt: SALT_FEE_CONTROLLER}(address(V3_FACTORY), address(ASSET_SINK));
+    /// 7. Deploy the FeeAdapter.
+    FEE_ADAPTER = new V3FeeAdapter{salt: SALT_FEE_ADAPTER}(address(V3_FACTORY), address(TOKEN_JAR));
 
-    /// 8. Set this contract as the feeSetter
-    FEE_CONTROLLER.setFeeSetter(address(this));
+    /// 8. Update the feeSetter to the owner.
+    FEE_ADAPTER.setFeeSetter(owner);
 
-    /// 9. Set initial merkle root
-    FEE_CONTROLLER.setMerkleRoot(INITIAL_MERKLE_ROOT);
+    /// 9. Store fee tiers.
+    FEE_ADAPTER.storeFeeTier(100);
+    FEE_ADAPTER.storeFeeTier(500);
+    FEE_ADAPTER.storeFeeTier(3000);
+    FEE_ADAPTER.storeFeeTier(10_000);
 
-    /// 10. Set default fees
-    FEE_CONTROLLER.setDefaultFeeByFeeTier(100, DEFAULT_FEE_100);
-    FEE_CONTROLLER.setDefaultFeeByFeeTier(500, DEFAULT_FEE_500);
-    FEE_CONTROLLER.setDefaultFeeByFeeTier(3000, DEFAULT_FEE_3000);
-    FEE_CONTROLLER.setDefaultFeeByFeeTier(10_000, DEFAULT_FEE_10000);
-
-    /// 11. Update the feeSetter to the owner.
-    FEE_CONTROLLER.setFeeSetter(owner);
-
-    /// 12. Store fee tiers.
-    FEE_CONTROLLER.storeFeeTier(100);
-    FEE_CONTROLLER.storeFeeTier(500);
-    FEE_CONTROLLER.storeFeeTier(3000);
-    FEE_CONTROLLER.storeFeeTier(10_000);
-
-    /// 13. Update the owner on the fee controller.
-    IOwned(address(FEE_CONTROLLER)).transferOwnership(owner);
-
-    /// 14. Deploy the UNIMinter
-    UNI_MINTER = new UNIMinter(owner);
+    /// 10. Update the owner on the fee adapter.
+    IOwned(address(FEE_ADAPTER)).transferOwnership(owner);
   }
 }

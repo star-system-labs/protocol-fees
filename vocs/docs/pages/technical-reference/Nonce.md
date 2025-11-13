@@ -1,15 +1,15 @@
 # Nonce
-[Git Source](https://github.com/Uniswap/phoenix-fees/blob/38e66458d36a90d45d2da802d97629a7d8137a57/src/base/Nonce.sol)
+[Git Source](https://github.com/Uniswap/protocol-fees/blob/05bb600bef88d196654e551c6a749d9e98fe3f0f/src/base/Nonce.sol)
 
 **Inherits:**
-[INonce](/technical-reference/INonce)
+[INonce](/Users/daniel/Documents/uniswap/contracts/protocol-fees/forge-docs/src/src/interfaces/base/INonce.sol/interface.INonce.md)
 
 
 ## State Variables
 ### nonce
 
 ```solidity
-uint256 public nonce;
+uint256 public nonce
 ```
 
 
@@ -18,6 +18,6 @@ uint256 public nonce;
 
 
 ```solidity
-modifier handleNonce(uint256 _nonce);
+modifier handleNonce(uint256 _nonce) ;
 ```
 

@@ -1,7 +1,7 @@
 # IOwned
-[Git Source](https://github.com/Uniswap/phoenix-fees/blob/38e66458d36a90d45d2da802d97629a7d8137a57/src/interfaces/base/IOwned.sol)
+[Git Source](https://github.com/Uniswap/protocol-fees/blob/05bb600bef88d196654e551c6a749d9e98fe3f0f/src/interfaces/base/IOwned.sol)
 
-*Interface for Solmate's Owned.sol contract*
+Interface for Solmate's Owned.sol contract
 
 
 ## Functions

@@ -6,44 +6,49 @@ import {ERC20} from "solmate/src/tokens/ERC20.sol";
 import {SafeTransferLib} from "solmate/src/utils/SafeTransferLib.sol";
 import {ResourceManager} from "../base/ResourceManager.sol";
 import {Nonce} from "../base/Nonce.sol";
-import {IAssetSink} from "../interfaces/IAssetSink.sol";
+import {ITokenJar} from "../interfaces/ITokenJar.sol";
 import {IReleaser} from "../interfaces/IReleaser.sol";
 
 /// @title ExchangeReleaser
-/// @notice A contract that releases assets from an AssetSink in exchange for transferring a
-/// threshold
-/// amount of a resource token
+/// @notice A contract that releases assets from an TokenJar in exchange for transferring a
+/// threshold amount of a resource token
 /// @dev Inherits from ResourceManager for resource transferring functionality and Nonce for replay
 /// protection
 /// @custom:security-contact security@uniswap.org
 abstract contract ExchangeReleaser is IReleaser, ResourceManager, Nonce {
   using SafeTransferLib for ERC20;
 
+  /// @notice Maximum number of different assets that can be released in a single call
+  uint256 public constant MAX_RELEASE_LENGTH = 20;
+
   /// @inheritdoc IReleaser
-  IAssetSink public immutable ASSET_SINK;
+  ITokenJar public immutable TOKEN_JAR;
 
   /// @notice Creates a new ExchangeReleaser instance
   /// @param _resource The address of the resource token that must be transferred
-  /// @param _assetSink The address of the AssetSink contract holding the assets
+  /// @param _threshold The minimum amount of resource tokens that must be transferred
+  /// @param _tokenJar The address of the TokenJar contract holding the assets
   /// @param _recipient The address that will receive the resource tokens
-  constructor(address _resource, uint256 _threshold, address _assetSink, address _recipient)
+  constructor(address _resource, uint256 _threshold, address _tokenJar, address _recipient)
     ResourceManager(_resource, _threshold, msg.sender, _recipient)
   {
-    ASSET_SINK = IAssetSink(payable(_assetSink));
+    TOKEN_JAR = ITokenJar(payable(_tokenJar));
   }
 
   /// @inheritdoc IReleaser
-  function release(uint256 _nonce, Currency[] calldata assets, address recipient) external virtual {
-    _release(_nonce, assets, recipient);
-  }
-
-  /// @notice Internal function to handle the nonce check, transfer the RESOURCE, and call the
-  /// release of assets on the AssetSink.
-  function _release(uint256 _nonce, Currency[] calldata assets, address recipient)
-    internal
+  function release(uint256 _nonce, Currency[] calldata assets, address recipient)
+    external
     handleNonce(_nonce)
   {
+    require(assets.length <= MAX_RELEASE_LENGTH, TooManyAssets());
     RESOURCE.safeTransferFrom(msg.sender, RESOURCE_RECIPIENT, threshold);
-    ASSET_SINK.release(assets, recipient);
+    TOKEN_JAR.release(assets, recipient);
+    _afterRelease(assets, recipient);
+  }
+
+  /// @notice Internal function to handle any post transfer actions
+  /// e.g. bridge calls or notifications
+  function _afterRelease(Currency[] calldata assets, address recipient) internal virtual {
+    // by default do nothing after release
   }
 }

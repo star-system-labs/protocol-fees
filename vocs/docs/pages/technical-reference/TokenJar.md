@@ -1,13 +1,13 @@
-# AssetSink
-[Git Source](https://github.com/Uniswap/phoenix-fees/blob/38e66458d36a90d45d2da802d97629a7d8137a57/src/AssetSink.sol)
+# TokenJar
+[Git Source](https://github.com/Uniswap/protocol-fees/blob/05bb600bef88d196654e551c6a749d9e98fe3f0f/src/TokenJar.sol)
 
 **Inherits:**
-Owned, [IAssetSink](/technical-reference/IAssetSink)
+Owned, [ITokenJar](/Users/daniel/Documents/uniswap/contracts/protocol-fees/forge-docs/src/src/interfaces/ITokenJar.sol/interface.ITokenJar.md)
 
-Sink for protocol fees
+A singular destination for protocol fees
 
-*Fees accumulate passively in this contract from external sources.
-Stored fees can be released by an authorized releaser contract.*
+Fees accumulate passively in this contract from external sources.
+Stored fees can be released by an authorized releaser contract.
 
 **Note:**
 security-contact: security@uniswap.org
@@ -15,11 +15,11 @@ security-contact: security@uniswap.org
 
 ## State Variables
 ### releaser
-*The releaser has exclusive access to the `release()` function*
+The releaser has exclusive access to the `release()` function
 
 
 ```solidity
-address public releaser;
+address public releaser
 ```
 
 
@@ -30,14 +30,14 @@ Ensures only the releaser can call the release function
 
 
 ```solidity
-modifier onlyReleaser();
+modifier onlyReleaser() ;
 ```
 
 ### constructor
 
-*creates an asset sink where the deployer is the initial owner
+creates an token jar where the deployer is the initial owner
 during deployment, the deployer SHOULD set the releaser address and
-transfer ownership*
+transfer ownership
 
 
 ```solidity
@@ -48,7 +48,7 @@ constructor() Owned(msg.sender);
 
 Release assets to a specified recipient
 
-*only callable by `releaser`*
+only callable by `releaser`
 
 
 ```solidity
@@ -59,7 +59,7 @@ function release(Currency[] calldata assets, address recipient) external onlyRel
 
 Set the address of the IReleaser contract
 
-*only callabe by `owner`*
+only callabe by `owner`
 
 
 ```solidity

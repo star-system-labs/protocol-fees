@@ -9,10 +9,10 @@ import {
 } from "briefcase/deployers/v3-core/UniswapV3FactoryDeployer.sol";
 import {IUniswapV3Pool} from "v3-core/contracts/interfaces/IUniswapV3Pool.sol";
 import {Deployer} from "../src/Deployer.sol";
-import {IAssetSink} from "../src/interfaces/IAssetSink.sol";
+import {ITokenJar} from "../src/interfaces/ITokenJar.sol";
 import {IReleaser} from "../src/interfaces/IReleaser.sol";
 import {IOwned} from "../src/interfaces/base/IOwned.sol";
-import {IV3FeeController} from "../src/interfaces/IV3FeeController.sol";
+import {IV3FeeAdapter} from "../src/interfaces/IV3FeeAdapter.sol";
 import {Merkle} from "murky/src/Merkle.sol";
 import {FixedPointMathLib} from "solmate/src/utils/FixedPointMathLib.sol";
 import {Currency} from "v4-core/types/Currency.sol";
@@ -20,7 +20,7 @@ import {IUniswapV2Factory} from "./interfaces/IUniswapV2Factory.sol";
 import {IUniswapV2Pair} from "./interfaces/IUniswapV2Pair.sol";
 import {IUniswapV2Router02} from "./interfaces/IUniswapV2Router02.sol";
 
-contract PhoenixForkTest is Test {
+contract ProtocolFeesForkTest is Test {
   using FixedPointMathLib for uint256;
 
   Deployer public deployer;
@@ -28,9 +28,9 @@ contract PhoenixForkTest is Test {
   IUniswapV2Factory public v2Factory;
   IUniswapV2Router02 public v2Router;
 
-  IAssetSink public assetSink;
+  ITokenJar public tokenJar;
   IReleaser public releaser;
-  IV3FeeController public feeController;
+  IV3FeeAdapter public feeAdapter;
 
   address public owner;
   Merkle merkle;
@@ -61,15 +61,15 @@ contract PhoenixForkTest is Test {
     owner = factory.owner();
 
     deployer = new Deployer();
-    assetSink = deployer.ASSET_SINK();
+    tokenJar = deployer.TOKEN_JAR();
     releaser = deployer.RELEASER();
-    feeController = deployer.FEE_CONTROLLER();
+    feeAdapter = deployer.FEE_ADAPTER();
 
     merkle = new Merkle();
 
-    // set the fee controller on the v3 factory
+    // set the fee adapter on the v3 factory
     vm.prank(owner);
-    factory.setOwner(address(feeController));
+    factory.setOwner(address(feeAdapter));
 
     // assumes governance timelock takes back control of the feeSetter
     vm.prank(owner);
@@ -94,28 +94,28 @@ contract PhoenixForkTest is Test {
   }
 
   function test_enableFeeV3() public {
-    assertEq(feeController.feeSetter(), owner);
+    assertEq(feeAdapter.feeSetter(), owner);
+    vm.startPrank(owner);
+    feeAdapter.setDefaultFeeByFeeTier(100, 10 << 4 | 10);
+    feeAdapter.setDefaultFeeByFeeTier(500, 8 << 4 | 8);
+    feeAdapter.setDefaultFeeByFeeTier(3000, 6 << 4 | 6);
+    feeAdapter.setDefaultFeeByFeeTier(10_000, 4 << 4 | 4);
+    vm.stopPrank();
 
-    // using the default root in `Deployer.sol`
-    // merkle proof from `merkle-generator prove data/merkle-tree.json
-    // 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2,0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48`
-    bytes32[] memory proof = new bytes32[](13);
-    proof[0] = hex"64701c9d6df20883102b4515d64953bf39ee59f3069bbb679d1507d8ed141094";
-    proof[1] = hex"fd512ec06bd9091616776ead998717afbf49848da3561a29eb98132f51f16c02";
-    proof[2] = hex"b659678321fbda31383bb84dab1a4b7c8faf6376791174be2b4028382c4ebcdb";
-    proof[3] = hex"567e458484cfbf530f1b850de67620bb77799744c6f117722e6705613dba33ee";
-    proof[4] = hex"f1e9daeeb8915523344fd1a071728cc9c1bb0a2d3210a8b262dca51e7fb1df19";
-    proof[5] = hex"d896a7b6c18f8eb93c7a901d80f3dfaaf56a94703b2c27dde812ec30b0239f86";
-    proof[6] = hex"d8e6f2c82c08686663f81a2ca29fdd83b0e87c6ee1ff9697b0faf5e66457a859";
-    proof[7] = hex"389d2c23e948ab29dd7acb4639b93a60c0c5f9311f5e575d11bd2f537d74f6a9";
-    proof[8] = hex"c5fdb36b161fa88ea56410fd2572e42d3abc374c146cb0b6062a1537eb650050";
-    proof[9] = hex"65f4d6dae6ce0f1f01d6e459669bfa3238890e789f0c24998fb0f4ce9388b0ef";
-    proof[10] = hex"9f9b7ec31eda410934456f214fa1e25795174defc9e5bcc47db08bdc172b5ecc";
-    proof[11] = hex"b8b5ae9987862c9aebf408e92fa62df4ef4bd96025b51ff741b950388ebc35fc";
-    proof[12] = hex"01fc49a9d2811238276d7e63fbc392d9d748c9a460dcfa617d341a7c39f79fd8";
+    // Generate merkle root from leaves
+    bytes32 targetLeaf = _hashLeaf(USDC, WETH);
+    bytes32 dummyLeaf = _hashLeaf(address(0), address(1));
+    bytes32[] memory leaves = new bytes32[](2);
+    leaves[0] = targetLeaf;
+    leaves[1] = dummyLeaf;
+    bytes32 merkleRoot = merkle.getRoot(leaves);
+
+    vm.prank(owner);
+    feeAdapter.setMerkleRoot(merkleRoot);
 
     // Enable fees on the 4 pools
-    feeController.triggerFeeUpdate(USDC, WETH, proof);
+    bytes32[] memory proof = merkle.getProof(leaves, 0);
+    feeAdapter.triggerFeeUpdate(USDC, WETH, proof);
 
     // fees were set correctly, from the Deployer.sol
     (,,,,, uint8 protocolFee,) = IUniswapV3Pool(pool0).slot0();
@@ -129,12 +129,24 @@ contract PhoenixForkTest is Test {
   }
 
   function test_enableFeeV3MultiProof() public {
-    assertEq(feeController.feeSetter(), owner);
+    assertEq(feeAdapter.feeSetter(), owner);
+    vm.startPrank(owner);
+    feeAdapter.setDefaultFeeByFeeTier(100, 10 << 4 | 10);
+    feeAdapter.setDefaultFeeByFeeTier(500, 8 << 4 | 8);
+    feeAdapter.setDefaultFeeByFeeTier(3000, 6 << 4 | 6);
+    feeAdapter.setDefaultFeeByFeeTier(10_000, 4 << 4 | 4);
+    vm.stopPrank();
+
+    // Using the real merkle root from the generated merkle tree
+    bytes32 merkleRoot = hex"472c8960ea78de635eb7e32c5085f9fb963e626b5a68c939bfad24e022383b3a";
+
+    vm.prank(owner);
+    feeAdapter.setMerkleRoot(merkleRoot);
 
     // Setting up the pairs for USDC-WETH and DAI-WETH
-    IV3FeeController.Pair[] memory pairs = new IV3FeeController.Pair[](2);
-    pairs[0] = IV3FeeController.Pair({token0: USDC, token1: WETH});
-    pairs[1] = IV3FeeController.Pair({token0: DAI, token1: WETH});
+    IV3FeeAdapter.Pair[] memory pairs = new IV3FeeAdapter.Pair[](2);
+    pairs[0] = IV3FeeAdapter.Pair({token0: USDC, token1: WETH});
+    pairs[1] = IV3FeeAdapter.Pair({token0: DAI, token1: WETH});
 
     // Multi-proof elements from the generated proof
     bytes32[] memory proof = new bytes32[](22);
@@ -169,7 +181,7 @@ contract PhoenixForkTest is Test {
     }
 
     // Enable fees on the pools
-    feeController.batchTriggerFeeUpdate(pairs, proof, proofFlags);
+    feeAdapter.batchTriggerFeeUpdate(pairs, proof, proofFlags);
 
     // Verify fees were set correctly for USDC-WETH pools
     (,,,,, uint8 protocolFee,) = IUniswapV3Pool(pool0).slot0();
@@ -195,8 +207,8 @@ contract PhoenixForkTest is Test {
   function test_enableFeeV2() public {
     assertEq(v2Factory.feeToSetter(), owner);
     vm.prank(owner);
-    v2Factory.setFeeTo(address(assetSink));
-    assertEq(v2Factory.feeTo(), address(assetSink));
+    v2Factory.setFeeTo(address(tokenJar));
+    assertEq(v2Factory.feeTo(), address(tokenJar));
   }
 
   function test_createV2Fees() public {
@@ -221,8 +233,8 @@ contract PhoenixForkTest is Test {
       USDC, WETH, pair.balanceOf(address(this)), 0, 0, address(this), block.timestamp
     );
 
-    // some liquidity is sent to the asset sink
-    assertGt(pair.balanceOf(address(assetSink)), 0);
+    // some liquidity is sent to the token jar
+    assertGt(pair.balanceOf(address(tokenJar)), 0);
   }
 
   function test_collectFeeV3() public {
@@ -252,35 +264,35 @@ contract PhoenixForkTest is Test {
     assertApproxEqRel(token0Pool3, uint256(1000e6).mulWadDown(0.01e18) / 6, 0.0001e18);
     assertApproxEqRel(token1Pool3, uint256(1e18).mulWadDown(0.01e18) / 6, 0.0001e18);
 
-    IV3FeeController.CollectParams[] memory params = new IV3FeeController.CollectParams[](3);
-    params[0] = IV3FeeController.CollectParams({
+    IV3FeeAdapter.CollectParams[] memory params = new IV3FeeAdapter.CollectParams[](3);
+    params[0] = IV3FeeAdapter.CollectParams({
       pool: pool1, amount0Requested: type(uint128).max, amount1Requested: type(uint128).max
     });
-    params[1] = IV3FeeController.CollectParams({
+    params[1] = IV3FeeAdapter.CollectParams({
       pool: pool2, amount0Requested: type(uint128).max, amount1Requested: type(uint128).max
     });
-    params[2] = IV3FeeController.CollectParams({
+    params[2] = IV3FeeAdapter.CollectParams({
       pool: pool3, amount0Requested: type(uint128).max, amount1Requested: type(uint128).max
     });
 
-    // asset sink has no tokens
-    assertEq(IERC20(USDC).balanceOf(address(assetSink)), 0);
-    assertEq(IERC20(WETH).balanceOf(address(assetSink)), 0);
-    feeController.collect(params);
+    // token jar has no tokens
+    assertEq(IERC20(USDC).balanceOf(address(tokenJar)), 0);
+    assertEq(IERC20(WETH).balanceOf(address(tokenJar)), 0);
+    feeAdapter.collect(params);
 
-    // asset sink has collected all fees
+    // token jar has collected all fees
     // subtract 3 wei because the v3 pool always leaves 1 wei behind
     assertEq(
-      IERC20(USDC).balanceOf(address(assetSink)), token0Pool1 + token0Pool2 + token0Pool3 - 3 wei
+      IERC20(USDC).balanceOf(address(tokenJar)), token0Pool1 + token0Pool2 + token0Pool3 - 3 wei
     );
     assertEq(
-      IERC20(WETH).balanceOf(address(assetSink)), token1Pool1 + token1Pool2 + token1Pool3 - 3 wei
+      IERC20(WETH).balanceOf(address(tokenJar)), token1Pool1 + token1Pool2 + token1Pool3 - 3 wei
     );
   }
 
   function test_releaseV3(address caller, address recipient) public {
     vm.assume(caller != address(0));
-    vm.assume(recipient != address(0));
+    vm.assume(recipient != address(0) && recipient != address(tokenJar));
     test_collectFeeV3();
 
     // give the caller some UNI to burn
@@ -290,8 +302,8 @@ contract PhoenixForkTest is Test {
     uint256 balance0Before = IERC20(USDC).balanceOf(recipient);
     uint256 balance1Before = IERC20(WETH).balanceOf(recipient);
 
-    uint256 balance0AssetSinkBefore = IERC20(USDC).balanceOf(address(assetSink));
-    uint256 balance1AssetSinkBefore = IERC20(WETH).balanceOf(address(assetSink));
+    uint256 balance0TokenJarBefore = IERC20(USDC).balanceOf(address(tokenJar));
+    uint256 balance1TokenJarBefore = IERC20(WETH).balanceOf(address(tokenJar));
 
     // release the assets
     uint256 _nonce = releaser.nonce();
@@ -304,20 +316,20 @@ contract PhoenixForkTest is Test {
     releaser.release(_nonce, currencies, recipient);
     vm.stopPrank();
 
-    // amounts transferred from the asset sink to the recipient
-    assertEq(IERC20(USDC).balanceOf(address(assetSink)), 0);
-    assertEq(IERC20(WETH).balanceOf(address(assetSink)), 0);
-    assertEq(IERC20(USDC).balanceOf(recipient) - balance0Before, balance0AssetSinkBefore);
-    assertEq(IERC20(WETH).balanceOf(recipient) - balance1Before, balance1AssetSinkBefore);
+    // amounts transferred from the token jar to the recipient
+    assertEq(IERC20(USDC).balanceOf(address(tokenJar)), 0);
+    assertEq(IERC20(WETH).balanceOf(address(tokenJar)), 0);
+    assertEq(IERC20(USDC).balanceOf(recipient) - balance0Before, balance0TokenJarBefore);
+    assertEq(IERC20(WETH).balanceOf(recipient) - balance1Before, balance1TokenJarBefore);
   }
 
   function test_releaseV2V3(address caller, address recipient) public {
     vm.assume(caller != address(0));
-    vm.assume(recipient != address(0));
+    vm.assume(recipient != address(0) && recipient != address(tokenJar));
     test_createV2Fees();
     test_collectFeeV3();
 
-    uint256 pairBalanceBefore = pair.balanceOf(address(assetSink));
+    uint256 pairBalanceBefore = pair.balanceOf(address(tokenJar));
 
     // give the caller some UNI to burn
     deal(deployer.RESOURCE(), address(caller), releaser.threshold());
@@ -335,10 +347,10 @@ contract PhoenixForkTest is Test {
     releaser.release(_nonce, currencies, recipient);
     vm.stopPrank();
 
-    // amounts transferred from the asset sink to the recipient
-    assertEq(IERC20(USDC).balanceOf(address(assetSink)), 0);
-    assertEq(IERC20(WETH).balanceOf(address(assetSink)), 0);
-    assertEq(pair.balanceOf(address(assetSink)), 0);
+    // amounts transferred from the token jar to the recipient
+    assertEq(IERC20(USDC).balanceOf(address(tokenJar)), 0);
+    assertEq(IERC20(WETH).balanceOf(address(tokenJar)), 0);
+    assertEq(pair.balanceOf(address(tokenJar)), 0);
     assertEq(pair.balanceOf(recipient), pairBalanceBefore);
   }
 
@@ -347,7 +359,7 @@ contract PhoenixForkTest is Test {
     test_releaseV2V3(address(this), address(this));
 
     vm.prank(owner);
-    feeController.setFactoryOwner(newOwner);
+    feeAdapter.setFactoryOwner(newOwner);
 
     assertEq(IOwned(address(factory)).owner(), newOwner);
   }

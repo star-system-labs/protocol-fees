@@ -7,9 +7,9 @@ import {MerkleProof} from "openzeppelin-contracts/contracts/utils/cryptography/M
 import {Owned} from "solmate/src/auth/Owned.sol";
 import {PoolKey} from "v4-core/types/PoolKey.sol";
 
-/// @title V4FeeController
-/// @notice Triggers the collection of protocol fees to a predefined fee sink.
-contract V4FeeController is Owned {
+/// @title V4FeeAdapter
+/// @notice Triggers the collection of protocol fees to a predefined token jar.
+contract V4FeeAdapter is Owned {
   /// @notice Thrown when the amount collected is less than the amount expected.
   error AmountCollectedTooLow(uint256 amountCollected, uint256 amountExpected);
 
@@ -18,16 +18,16 @@ contract V4FeeController is Owned {
 
   IPoolManager public immutable POOL_MANAGER;
 
-  address public feeSink;
+  address public tokenJar;
 
   bytes32 public merkleRoot;
 
-  constructor(address _poolManager, address _feeSink, address _owner) Owned(_owner) {
+  constructor(address _poolManager, address _tokenJar, address _owner) Owned(_owner) {
     POOL_MANAGER = IPoolManager(_poolManager);
-    feeSink = _feeSink;
+    tokenJar = _tokenJar;
   }
 
-  /// @notice Collects the protocol fees for the given currencies to the fee sink.
+  /// @notice Collects the protocol fees for the given currencies to the token jar.
   /// @param currency The currencies to collect fees for.
   /// @param amountRequested The amount of each currency to request.
   /// @param amountExpected The amount of each currency that is expected to be collected.
@@ -41,14 +41,14 @@ contract V4FeeController is Owned {
       uint256 _amountRequested = amountRequested[i];
       uint256 _amountExpected = amountExpected[i];
 
-      amountCollected = POOL_MANAGER.collectProtocolFees(feeSink, currency[i], _amountRequested);
+      amountCollected = POOL_MANAGER.collectProtocolFees(tokenJar, currency[i], _amountRequested);
       require(
         amountCollected >= _amountExpected, AmountCollectedTooLow(amountCollected, _amountExpected)
       );
     }
   }
 
-  /// @notice Sets the merkle root for the fee controller.
+  /// @notice Sets the merkle root for the fee adapter.
   /// @dev only callable by owner
   /// @param _merkleRoot The merkle root to set.
   function setMerkleRoot(bytes32 _merkleRoot) external onlyOwner {

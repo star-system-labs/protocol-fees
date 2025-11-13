@@ -1,20 +1,22 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 pragma solidity ^0.8.29;
 
-import {PhoenixTestBase} from "./utils/PhoenixTestBase.sol";
+import {ProtocolFeesTestBase} from "./utils/ProtocolFeesTestBase.sol";
 import {Currency} from "v4-core/types/Currency.sol";
 import {CurrencyLibrary} from "v4-core/types/Currency.sol";
 import {INonce} from "../src/interfaces/base/INonce.sol";
 import {IOwned} from "../src/interfaces/base/IOwned.sol";
 import {IResourceManager} from "../src/interfaces/base/IResourceManager.sol";
+import {IReleaser} from "../src/interfaces/IReleaser.sol";
 import {Firepit} from "../src/releasers/Firepit.sol";
+import {ExchangeReleaser} from "../src/releasers/ExchangeReleaser.sol";
 
-contract FirepitTest is PhoenixTestBase {
+contract FirepitTest is ProtocolFeesTestBase {
   function setUp() public override {
     super.setUp();
 
     vm.prank(owner);
-    assetSink.setReleaser(address(firepit));
+    tokenJar.setReleaser(address(firepit));
   }
 
   function test_release_release_erc20() public {
@@ -27,7 +29,7 @@ contract FirepitTest is PhoenixTestBase {
     firepit.release(firepit.nonce(), releaseMockToken, alice);
 
     assertEq(mockToken.balanceOf(alice), INITIAL_TOKEN_AMOUNT);
-    assertEq(mockToken.balanceOf(address(assetSink)), 0);
+    assertEq(mockToken.balanceOf(address(tokenJar)), 0);
     assertEq(resource.balanceOf(alice), 0);
     assertEq(resource.balanceOf(address(firepit)), 0);
     assertEq(resource.balanceOf(address(0xdead)), firepit.threshold());
@@ -42,7 +44,7 @@ contract FirepitTest is PhoenixTestBase {
     resource.approve(address(firepit), INITIAL_TOKEN_AMOUNT);
     firepit.release(firepit.nonce(), releaseMockNative, alice);
 
-    assertEq(CurrencyLibrary.ADDRESS_ZERO.balanceOf(address(assetSink)), 0);
+    assertEq(CurrencyLibrary.ADDRESS_ZERO.balanceOf(address(tokenJar)), 0);
     assertEq(resource.balanceOf(alice), 0);
     assertEq(resource.balanceOf(address(firepit)), 0);
     assertEq(resource.balanceOf(address(0xdead)), firepit.threshold());
@@ -85,7 +87,7 @@ contract FirepitTest is PhoenixTestBase {
     // First release call
     firepit.release(nonce, releaseMockToken, alice);
     assertEq(mockToken.balanceOf(alice), INITIAL_TOKEN_AMOUNT);
-    assertEq(mockToken.balanceOf(address(assetSink)), 0);
+    assertEq(mockToken.balanceOf(address(tokenJar)), 0);
     assertEq(resource.balanceOf(alice), 0);
     assertEq(resource.balanceOf(address(firepit)), 0);
     assertEq(resource.balanceOf(address(0xdead)), INITIAL_TOKEN_AMOUNT);
@@ -153,7 +155,7 @@ contract FirepitTest is PhoenixTestBase {
 
     uint256 nonce = firepit.nonce();
 
-    vm.expectRevert(Firepit.TooManyAssets.selector);
+    vm.expectRevert(IReleaser.TooManyAssets.selector);
     firepit.release(nonce, assets, alice);
   }
 }

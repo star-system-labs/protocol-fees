@@ -7,20 +7,19 @@ import {
   IUniswapV3Factory
 } from "briefcase/deployers/v3-core/UniswapV3FactoryDeployer.sol";
 import {Deployer} from "../src/Deployer.sol";
-import {IAssetSink} from "../src/interfaces/IAssetSink.sol";
+import {ITokenJar} from "../src/interfaces/ITokenJar.sol";
 import {IReleaser} from "../src/interfaces/IReleaser.sol";
 import {IOwned} from "../src/interfaces/base/IOwned.sol";
-import {IV3FeeController} from "../src/interfaces/IV3FeeController.sol";
-import {IUNIMinter} from "../src/interfaces/IUNIMinter.sol";
+import {IV3FeeAdapter} from "../src/interfaces/IV3FeeAdapter.sol";
 
 contract DeployerTest is Test {
   Deployer public deployer;
 
   IUniswapV3Factory public factory;
 
-  IAssetSink public assetSink;
+  ITokenJar public tokenJar;
   IReleaser public releaser;
-  IV3FeeController public feeController;
+  IV3FeeAdapter public feeAdapter;
 
   address public owner;
 
@@ -43,45 +42,29 @@ contract DeployerTest is Test {
 
     deployer = new Deployer();
 
-    assetSink = deployer.ASSET_SINK();
+    tokenJar = deployer.TOKEN_JAR();
     releaser = deployer.RELEASER();
-    feeController = deployer.FEE_CONTROLLER();
+    feeAdapter = deployer.FEE_ADAPTER();
   }
 
-  function test_deployer_assetSink_setUp() public view {
-    assertEq(IOwned(address(assetSink)).owner(), factory.owner());
-    assertEq(assetSink.releaser(), address(releaser));
+  function test_deployer_tokenJar_setUp() public view {
+    assertEq(IOwned(address(tokenJar)).owner(), factory.owner());
+    assertEq(tokenJar.releaser(), address(releaser));
   }
 
   function test_deployer_releaser_setUp() public view {
     assertEq(IOwned(address(releaser)).owner(), factory.owner());
     assertEq(releaser.thresholdSetter(), factory.owner());
-    assertEq(releaser.threshold(), 10_000e18);
-    assertEq(address(releaser.ASSET_SINK()), address(assetSink));
+    assertEq(releaser.threshold(), 69_420);
+    assertEq(address(releaser.TOKEN_JAR()), address(tokenJar));
     assertEq(releaser.RESOURCE_RECIPIENT(), address(0xdead));
     assertEq(address(releaser.RESOURCE()), address(0x1f9840a85d5aF5bf1D1762F925BDADdC4201F984));
   }
 
-  function test_deployer_feeController_setUp() public view {
-    assertEq(IOwned(address(feeController)).owner(), factory.owner());
-    assertEq(feeController.feeSetter(), factory.owner());
-    assertEq(address(feeController.ASSET_SINK()), address(assetSink));
-    assertEq(address(feeController.FACTORY()), address(factory));
-
-    // initial fee values are set
-    assertEq(
-      feeController.merkleRoot(),
-      bytes32(0x472c8960ea78de635eb7e32c5085f9fb963e626b5a68c939bfad24e022383b3a)
-    );
-    assertEq(feeController.defaultFees(100), 4 << 4 | 4);
-    assertEq(feeController.defaultFees(500), 4 << 4 | 4);
-    assertEq(feeController.defaultFees(3000), 6 << 4 | 6);
-    assertEq(feeController.defaultFees(10_000), 6 << 4 | 6);
-  }
-
-  function test_deployer_uniMinter_setUp() public view {
-    IUNIMinter uniMinter = deployer.UNI_MINTER();
-    assertEq(IOwned(address(uniMinter)).owner(), factory.owner());
-    assertEq(address(uniMinter.UNI()), 0x1f9840a85d5aF5bf1D1762F925BDADdC4201F984);
+  function test_deployer_feeAdapter_setUp() public view {
+    assertEq(IOwned(address(feeAdapter)).owner(), factory.owner());
+    assertEq(feeAdapter.feeSetter(), factory.owner());
+    assertEq(address(feeAdapter.TOKEN_JAR()), address(tokenJar));
+    assertEq(address(feeAdapter.FACTORY()), address(factory));
   }
 }
