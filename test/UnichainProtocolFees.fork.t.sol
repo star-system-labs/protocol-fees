@@ -141,27 +141,6 @@ contract UnichainProtocolFeesForkTest is Test {
     }
   }
 
-  function test_noV3ProtocolFees() public view {
-    // Verify no V3 fee adapter is deployed (as per requirements)
-    // This is implicit in UnichainDeployer - it doesn't deploy V3FeeAdapter
-    // Just verify the deployer doesn't have V3_FEE_ADAPTER
-
-    // The UnichainDeployer should only have TOKEN_JAR and RELEASER
-    // No V3_FEE_ADAPTER should exist
-    assertTrue(address(tokenJar) != address(0), "TokenJar should exist");
-    assertTrue(address(releaser) != address(0), "Releaser should exist");
-  }
-
-  function test_noV2ProtocolFees() public view {
-    // Verify no V2 protocol fees are configured
-    // Unichain doesn't have V2, so this test just verifies the setup
-    // doesn't include any V2 related configuration
-
-    // The deployment should be minimal - just TokenJar and Releaser
-    assertTrue(address(tokenJar) != address(0), "TokenJar should exist");
-    assertTrue(address(releaser) != address(0), "Releaser should exist");
-  }
-
   function test_ownershipTransfer() public {
     // Test that ownership can be transferred by current owner
     address newOwner = address(0x9999);
