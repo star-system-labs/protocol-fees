@@ -189,6 +189,18 @@ contract UNIVestingTest is Test {
     assertEq(vesting.recipient(), newRecipient);
   }
 
+  function test_vesting_updateRecipient_revertsNoChangeUpdate() public {
+    // Try to update recipient to the same address as owner
+    vm.prank(owner);
+    vm.expectRevert(IUNIVesting.NoChangeUpdate.selector);
+    vesting.updateRecipient(recipient);
+
+    // Also test as recipient trying to update to same address
+    vm.prank(recipient);
+    vm.expectRevert(IUNIVesting.NoChangeUpdate.selector);
+    vesting.updateRecipient(recipient);
+  }
+
   function test_vesting_updateVestingAmount_revertsCannotUpdateAmount() public {
     uint256 newAmount = 10_000_000e18;
 
@@ -218,6 +230,19 @@ contract UNIVestingTest is Test {
     vesting.updateVestingAmount(newAmount);
 
     assertEq(vesting.quarterlyVestingAmount(), newAmount);
+  }
+
+  function test_vesting_updateVestingAmount_revertsNoChangeUpdate() public {
+    // Warp to before the first unlock so we can update the amount
+    vm.warp(JAN_1_2026 - 1);
+
+    // Try to update vesting amount to the same value (5_000_000 ether is the default)
+    vm.prank(owner);
+    vm.expectRevert(IUNIVesting.NoChangeUpdate.selector);
+    vesting.updateVestingAmount(5_000_000 ether);
+
+    // Verify the amount hasn't changed
+    assertEq(vesting.quarterlyVestingAmount(), 5_000_000 ether);
   }
 
   function test_withdraw_partialAllowance_onlyAdvancesPaidquartersPassed() public {

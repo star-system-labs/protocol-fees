@@ -59,6 +59,7 @@ contract UNIVesting is Owned, IUNIVesting {
   /// withdraw (i.e., quarters() == 0). This prevents changing the amount when tokens have already
   /// vested and are waiting to be claimed
   function updateVestingAmount(uint256 amount) public onlyOwner {
+    if (amount == quarterlyVestingAmount) revert NoChangeUpdate();
     require(quartersPassed() == 0, CannotUpdateAmount());
     quarterlyVestingAmount = amount;
     emit VestingAmountUpdated(amount);
@@ -68,6 +69,7 @@ contract UNIVesting is Owned, IUNIVesting {
   /// @dev Both the owner and current recipient can update the recipient address.
   /// This allows the recipient to transfer their vesting rights to another address.
   function updateRecipient(address _recipient) public onlyOwnerOrRecipient {
+    if (_recipient == recipient) revert NoChangeUpdate();
     recipient = _recipient;
     emit RecipientUpdated(recipient);
   }

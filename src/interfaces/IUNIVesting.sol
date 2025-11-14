@@ -19,6 +19,9 @@ interface IUNIVesting {
   /// withdraw.
   error CannotUpdateAmount();
 
+  /// @notice Thrown when trying to update a setting to the current value.
+  error NoChangeUpdate();
+
   /// @notice Emitted when the quarterly vesting amount is updated by the owner
   /// @param amount The new quarterly vesting amount
   event VestingAmountUpdated(uint256 amount);
