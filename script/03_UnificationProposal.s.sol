@@ -2,7 +2,7 @@
 pragma solidity ^0.8.20;
 
 import "forge-std/Script.sol";
-import {Deployer} from "../src/Deployer.sol";
+import {MainnetDeployer} from "./deployers/MainnetDeployer.sol";
 import {IUniswapV2Factory} from "briefcase/protocols/v2-core/interfaces/IUniswapV2Factory.sol";
 import {IUniswapV3Factory} from "briefcase/protocols/v3-core/interfaces/IUniswapV3Factory.sol";
 import {IERC20} from "forge-std/interfaces/IERC20.sol";
@@ -17,23 +17,19 @@ contract UnificationProposal is Script {
 
   function setUp() public {}
 
-  function run() public {
-    runDeployed(new Deployer());
-  }
-
-  function runDeployed(Deployer deployer) public {
+  function run(MainnetDeployer deployer) public {
     vm.startBroadcast();
     _run(deployer);
     vm.stopBroadcast();
   }
 
-  function runPranked(Deployer deployer) public {
+  function runPranked(MainnetDeployer deployer) public {
     vm.startPrank(V3_FACTORY.owner());
     _run(deployer);
     vm.stopPrank();
   }
 
-  function _run(Deployer deployer) public {
+  function _run(MainnetDeployer deployer) public {
     address timelock = deployer.V3_FACTORY().owner();
 
     // Burn 100M UNI

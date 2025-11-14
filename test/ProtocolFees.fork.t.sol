@@ -8,7 +8,7 @@ import {
   IUniswapV3Factory
 } from "briefcase/deployers/v3-core/UniswapV3FactoryDeployer.sol";
 import {IUniswapV3Pool} from "v3-core/contracts/interfaces/IUniswapV3Pool.sol";
-import {Deployer} from "../src/Deployer.sol";
+import {MainnetDeployer} from "../script/deployers/MainnetDeployer.sol";
 import {ITokenJar} from "../src/interfaces/ITokenJar.sol";
 import {IReleaser} from "../src/interfaces/IReleaser.sol";
 import {IOwned} from "../src/interfaces/base/IOwned.sol";
@@ -19,12 +19,12 @@ import {Currency} from "v4-core/types/Currency.sol";
 import {IUniswapV2Factory} from "./interfaces/IUniswapV2Factory.sol";
 import {IUniswapV2Pair} from "./interfaces/IUniswapV2Pair.sol";
 import {IUniswapV2Router02} from "./interfaces/IUniswapV2Router02.sol";
-import {UnificationProposal} from "../script/01_UnificationProposal.s.sol";
+import {UnificationProposal} from "../script/03_UnificationProposal.s.sol";
 
 contract ProtocolFeesForkTest is Test {
   using FixedPointMathLib for uint256;
 
-  Deployer public deployer;
+  MainnetDeployer public deployer;
   IUniswapV3Factory public factory;
   IUniswapV2Factory public v2Factory;
   IUniswapV2Router02 public v2Router;
@@ -61,7 +61,7 @@ contract ProtocolFeesForkTest is Test {
     v2Router = IUniswapV2Router02(0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D);
     owner = factory.owner();
 
-    deployer = new Deployer();
+    deployer = new MainnetDeployer();
     UnificationProposal proposal = new UnificationProposal();
     proposal.runPranked(deployer);
     tokenJar = deployer.TOKEN_JAR();

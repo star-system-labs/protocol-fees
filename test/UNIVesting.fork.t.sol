@@ -3,14 +3,14 @@ pragma solidity ^0.8.29;
 
 import {Test} from "forge-std/Test.sol";
 import {IERC20} from "forge-std/interfaces/IERC20.sol";
-import {Deployer} from "../src/Deployer.sol";
+import {MainnetDeployer} from "../script/deployers/MainnetDeployer.sol";
 import {IUNIVesting} from "../src/interfaces/IUNIVesting.sol";
-import {UnificationProposal} from "../script/01_UnificationProposal.s.sol";
+import {UnificationProposal} from "../script/03_UnificationProposal.s.sol";
 import {IOwned} from "../src/interfaces/base/IOwned.sol";
 import {IUniswapV3Factory} from "v3-core/contracts/interfaces/IUniswapV3Factory.sol";
 
 contract UNIVestingForkTest is Test {
-  Deployer public deployer;
+  MainnetDeployer public deployer;
   IUNIVesting public uniVesting;
   IUniswapV3Factory public factory;
 
@@ -24,16 +24,12 @@ contract UNIVestingForkTest is Test {
   uint256 constant QUARTERLY_AMOUNT = 5_000_000 ether;
 
   function setUp() public {
-    // Use a public Ethereum mainnet RPC for fork testing
-    // You can replace this with your own RPC URL by setting MAINNET_RPC_URL env variable
-    string memory rpcUrl =
-      vm.envOr("MAINNET_RPC_URL", string("https://ethereum-rpc.publicnode.com"));
-    vm.createSelectFork(rpcUrl);
+    vm.createSelectFork("mainnet");
     factory = IUniswapV3Factory(0x1F98431c8aD98523631AE4a59f267346ea31F984);
     owner = factory.owner();
 
     // Deploy and run the proposal
-    deployer = new Deployer();
+    deployer = new MainnetDeployer();
     UnificationProposal proposal = new UnificationProposal();
     proposal.runPranked(deployer);
 

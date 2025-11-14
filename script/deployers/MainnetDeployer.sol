@@ -1,18 +1,18 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 pragma solidity ^0.8.29;
 
-import {V3FeeAdapter} from "./feeAdapters/V3FeeAdapter.sol";
-import {ITokenJar} from "./interfaces/ITokenJar.sol";
-import {TokenJar} from "./TokenJar.sol";
-import {Firepit} from "./releasers/Firepit.sol";
-import {IUNIVesting} from "./interfaces/IUNIVesting.sol";
-import {UNIVesting} from "./UNIVesting.sol";
-import {IReleaser} from "./interfaces/IReleaser.sol";
-import {IV3FeeAdapter} from "./interfaces/IV3FeeAdapter.sol";
-import {IOwned} from "./interfaces/base/IOwned.sol";
+import {V3FeeAdapter} from "../../src/feeAdapters/V3FeeAdapter.sol";
+import {ITokenJar} from "../../src/interfaces/ITokenJar.sol";
+import {TokenJar} from "../../src/TokenJar.sol";
+import {Firepit} from "../../src/releasers/Firepit.sol";
+import {IUNIVesting} from "../../src/interfaces/IUNIVesting.sol";
+import {UNIVesting} from "../../src/UNIVesting.sol";
+import {IReleaser} from "../../src/interfaces/IReleaser.sol";
+import {IV3FeeAdapter} from "../../src/interfaces/IV3FeeAdapter.sol";
+import {IOwned} from "../../src/interfaces/base/IOwned.sol";
 import {IUniswapV3Factory} from "v3-core/contracts/interfaces/IUniswapV3Factory.sol";
 
-contract Deployer {
+contract MainnetDeployer {
   ITokenJar public immutable TOKEN_JAR;
   IReleaser public immutable RELEASER;
   IV3FeeAdapter public immutable V3_FEE_ADAPTER;
