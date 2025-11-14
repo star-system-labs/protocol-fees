@@ -59,7 +59,7 @@ contract UNIVesting is Owned, IUNIVesting {
   /// withdraw (i.e., quarters() == 0). This prevents changing the amount when tokens have already
   /// vested and are waiting to be claimed
   function updateVestingAmount(uint256 amount) public onlyOwner {
-    require(quarters() == 0, CannotUpdateAmount());
+    require(quartersPassed() == 0, CannotUpdateAmount());
     quarterlyVestingAmount = amount;
     emit VestingAmountUpdated(amount);
   }
@@ -80,10 +80,10 @@ contract UNIVesting is Owned, IUNIVesting {
   /// Relies on owner maintaining sufficient ERC20 allowance.
   /// If owner revokes allowance, withdrawals will fail with InsufficientAllowance.
   function withdraw() external {
-    uint48 quartersPassed = quarters();
-    require(quartersPassed > 0, OnlyQuarterly());
+    uint48 numQuarters = quartersPassed();
+    require(numQuarters > 0, OnlyQuarterly());
 
-    uint256 vestedAmount = quarterlyVestingAmount * uint256(quartersPassed);
+    uint256 vestedAmount = quarterlyVestingAmount * uint256(numQuarters);
     uint256 currentAllowance = UNI.allowance(owner, address(this));
 
     uint48 quartersPaid;
@@ -106,9 +106,9 @@ contract UNIVesting is Owned, IUNIVesting {
       // Full withdrawal path: sufficient allowance for all vested quarters
       // Advance timestamp by all quarters that have vested
       lastUnlockTimestamp =
-        uint48(DateTime.addMonths(lastUnlockTimestamp, quartersPassed * MONTHS_PER_QUARTER));
+        uint48(DateTime.addMonths(lastUnlockTimestamp, numQuarters * MONTHS_PER_QUARTER));
 
-      quartersPaid = quartersPassed;
+      quartersPaid = numQuarters;
     }
 
     UNI.safeTransferFrom(owner, recipient, vestedAmount);
@@ -118,9 +118,9 @@ contract UNIVesting is Owned, IUNIVesting {
   /// @inheritdoc IUNIVesting
   /// @dev Uses calendar-based quarters (3 months each)
   /// Returns 0 if no quarters have passed since last withdrawal.
-  function quarters() public view returns (uint48 quartersPassed) {
+  function quartersPassed() public view returns (uint48 numQuarters) {
     if (block.timestamp < lastUnlockTimestamp) return 0;
-    quartersPassed =
+    numQuarters =
       uint48(DateTime.diffMonths(lastUnlockTimestamp, block.timestamp) / MONTHS_PER_QUARTER);
   }
 }

@@ -64,6 +64,6 @@ interface IUNIVesting {
   function withdraw() external;
 
   /// @notice Calculates the number of complete quarters that have passed since the last withdrawal
-  /// @return quartersPassed Number of complete quarters available for withdrawal
-  function quarters() external view returns (uint48 quartersPassed);
+  /// @return numQuarters Number of complete quarters available for withdrawal
+  function quartersPassed() external view returns (uint48 numQuarters);
 }
