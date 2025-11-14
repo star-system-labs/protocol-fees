@@ -49,7 +49,7 @@ contract UNIVesting is Owned, IUNIVesting {
   /// to spend their UNI tokens for vesting to work properly.
   constructor(address _uni, address _recipient) Owned(msg.sender) {
     UNI = ERC20(_uni);
-    recipient = _recipient;
+    updateRecipient(_recipient);
     // set the quarterly timestamp such that the first unlock occurs on FIRST_UNLOCK_TIMESTAMP
     lastUnlockTimestamp = uint48(DateTime.subMonths(FIRST_UNLOCK_TIMESTAMP, MONTHS_PER_QUARTER));
   }
