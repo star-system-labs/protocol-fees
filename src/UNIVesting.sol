@@ -85,7 +85,8 @@ contract UNIVesting is Owned, IUNIVesting {
     uint48 numQuarters = quartersPassed();
     require(numQuarters > 0, OnlyQuarterly());
 
-    uint256 vestedAmount = quarterlyVestingAmount * uint256(numQuarters);
+    uint256 _quarterlyVestingAmount = quarterlyVestingAmount;
+    uint256 vestedAmount = _quarterlyVestingAmount * uint256(numQuarters);
     uint256 currentAllowance = UNI.allowance(owner, address(this));
 
     uint48 quartersPaid;
@@ -93,7 +94,7 @@ contract UNIVesting is Owned, IUNIVesting {
     if (currentAllowance < vestedAmount) {
       // Partial withdrawal path: owner's allowance is less than vested amount
       // Calculate how many complete quarters we can withdraw with current allowance
-      uint48 withdrawableQuarters = uint48(currentAllowance / quarterlyVestingAmount);
+      uint48 withdrawableQuarters = uint48(currentAllowance / _quarterlyVestingAmount);
 
       require(withdrawableQuarters > 0, InsufficientAllowance());
 
@@ -102,7 +103,7 @@ contract UNIVesting is Owned, IUNIVesting {
       lastUnlockTimestamp =
         uint48(DateTime.addMonths(lastUnlockTimestamp, withdrawableQuarters * MONTHS_PER_QUARTER));
 
-      vestedAmount = quarterlyVestingAmount * uint256(withdrawableQuarters);
+      vestedAmount = _quarterlyVestingAmount * uint256(withdrawableQuarters);
       quartersPaid = withdrawableQuarters;
     } else {
       // Full withdrawal path: sufficient allowance for all vested quarters
@@ -114,15 +115,16 @@ contract UNIVesting is Owned, IUNIVesting {
     }
 
     UNI.safeTransferFrom(owner, recipient, vestedAmount);
-    emit Withdrawn(recipient, vestedAmount, quartersPaid, lastUnlockTimestamp);
+    emit Withdrawn(recipient, vestedAmount, quartersPaid);
   }
 
   /// @inheritdoc IUNIVesting
   /// @dev Uses calendar-based quarters (3 months each)
   /// Returns 0 if no quarters have passed since last withdrawal.
   function quartersPassed() public view returns (uint48 numQuarters) {
-    if (block.timestamp < lastUnlockTimestamp) return 0;
+    uint48 _lastUnlockTimestamp = lastUnlockTimestamp;
+    if (block.timestamp < _lastUnlockTimestamp) return 0;
     numQuarters =
-      uint48(DateTime.diffMonths(lastUnlockTimestamp, block.timestamp) / MONTHS_PER_QUARTER);
+      uint48(DateTime.diffMonths(_lastUnlockTimestamp, block.timestamp) / MONTHS_PER_QUARTER);
   }
 }

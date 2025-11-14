@@ -98,7 +98,7 @@ contract UNIVestingTest is Test {
 
     uint256 startingOwnerBalance = vestingToken.balanceOf(owner);
     vm.expectEmit(true, true, true, true);
-    emit IUNIVesting.Withdrawn(recipient, FIVE_M, 1, uint48(timestamp));
+    emit IUNIVesting.Withdrawn(recipient, FIVE_M, 1);
     vesting.withdraw();
 
     assertEq(vesting.lastUnlockTimestamp(), timestamp);
@@ -111,7 +111,7 @@ contract UNIVestingTest is Test {
     vm.warp(timestamp);
 
     vm.expectEmit(true, true, true, true);
-    emit IUNIVesting.Withdrawn(recipient, FIVE_M * 2, 2, uint48(APR_1_2026));
+    emit IUNIVesting.Withdrawn(recipient, FIVE_M * 2, 2);
     vesting.withdraw();
 
     assertEq(vesting.lastUnlockTimestamp(), APR_1_2026);
@@ -149,9 +149,7 @@ contract UNIVestingTest is Test {
       );
 
       vm.expectEmit(true, true, true, true);
-      emit IUNIVesting.Withdrawn(
-        recipient, expectedWithdrawal, expectedQuartersPaid, expectedTimestamp
-      );
+      emit IUNIVesting.Withdrawn(recipient, expectedWithdrawal, expectedQuartersPaid);
       vesting.withdraw();
 
       assertEq(vestingToken.balanceOf(recipient), expectedWithdrawal);
@@ -259,7 +257,7 @@ contract UNIVestingTest is Test {
     uint48 startTimestamp = vesting.lastUnlockTimestamp();
     uint48 expectedTimestamp1 = uint48(BokkyPooBahsDateTimeLibrary.addMonths(startTimestamp, 2 * 3));
     vm.expectEmit(true, true, true, true);
-    emit IUNIVesting.Withdrawn(recipient, FIVE_M * 2, 2, expectedTimestamp1);
+    emit IUNIVesting.Withdrawn(recipient, FIVE_M * 2, 2);
     vesting.withdraw();
 
     // Recipient gets 10M (2 quarters worth)
@@ -277,7 +275,7 @@ contract UNIVestingTest is Test {
     uint48 expectedTimestamp2 =
       uint48(BokkyPooBahsDateTimeLibrary.addMonths(expectedTimestamp1, 1 * 3));
     vm.expectEmit(true, true, true, true);
-    emit IUNIVesting.Withdrawn(recipient, FIVE_M, 1, expectedTimestamp2);
+    emit IUNIVesting.Withdrawn(recipient, FIVE_M, 1);
     vesting.withdraw();
 
     // Total should now be 15M (3 quarters)
@@ -311,7 +309,7 @@ contract UNIVestingTest is Test {
     uint48 startTimestamp = vesting.lastUnlockTimestamp();
     uint48 expectedTimestamp = uint48(BokkyPooBahsDateTimeLibrary.addMonths(startTimestamp, 1 * 3));
     vm.expectEmit(true, true, true, true);
-    emit IUNIVesting.Withdrawn(recipient, FIVE_M, 1, expectedTimestamp);
+    emit IUNIVesting.Withdrawn(recipient, FIVE_M, 1);
     vesting.withdraw();
 
     // Should withdraw 1 quarter, leaving 2 remaining
@@ -348,7 +346,7 @@ contract UNIVestingTest is Test {
 
     uint48 expectedTimestamp1 = uint48(BokkyPooBahsDateTimeLibrary.addMonths(startTimestamp, 2 * 3));
     vm.expectEmit(true, true, true, true);
-    emit IUNIVesting.Withdrawn(recipient, FIVE_M * 2, 2, expectedTimestamp1);
+    emit IUNIVesting.Withdrawn(recipient, FIVE_M * 2, 2);
     vesting.withdraw();
 
     assertEq(vestingToken.balanceOf(recipient), FIVE_M * 2);
@@ -361,7 +359,7 @@ contract UNIVestingTest is Test {
     uint48 expectedTimestamp2 =
       uint48(BokkyPooBahsDateTimeLibrary.addMonths(expectedTimestamp1, 1 * 3));
     vm.expectEmit(true, true, true, true);
-    emit IUNIVesting.Withdrawn(recipient, FIVE_M, 1, expectedTimestamp2);
+    emit IUNIVesting.Withdrawn(recipient, FIVE_M, 1);
     vesting.withdraw();
 
     assertEq(vestingToken.balanceOf(recipient), FIVE_M * 3);
@@ -374,7 +372,7 @@ contract UNIVestingTest is Test {
     uint48 expectedTimestamp3 =
       uint48(BokkyPooBahsDateTimeLibrary.addMonths(expectedTimestamp2, 2 * 3));
     vm.expectEmit(true, true, true, true);
-    emit IUNIVesting.Withdrawn(recipient, FIVE_M * 2, 2, expectedTimestamp3);
+    emit IUNIVesting.Withdrawn(recipient, FIVE_M * 2, 2);
     vesting.withdraw();
 
     assertEq(vestingToken.balanceOf(recipient), FIVE_M * 5);
