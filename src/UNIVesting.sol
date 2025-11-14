@@ -58,7 +58,7 @@ contract UNIVesting is Owned, IUNIVesting {
   /// @dev Can only be called by the owner and only when no active quarters are available to
   /// withdraw (i.e., quarters() == 0). This prevents changing the amount when tokens have already
   /// vested and are waiting to be claimed
-  function updateVestingAmount(uint256 amount) public onlyOwner {
+  function updateVestingAmount(uint256 amount) external onlyOwner {
     if (amount == quarterlyVestingAmount) revert NoChangeUpdate();
     require(quartersPassed() == 0, CannotUpdateAmount());
     quarterlyVestingAmount = amount;
