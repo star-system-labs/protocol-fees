@@ -55,7 +55,7 @@ contract DeployerTest is Test {
   function test_deployer_releaser_setUp() public view {
     assertEq(IOwned(address(releaser)).owner(), factory.owner());
     assertEq(releaser.thresholdSetter(), factory.owner());
-    assertEq(releaser.threshold(), 69_420);
+    assertEq(releaser.threshold(), 10_000 ether);
     assertEq(address(releaser.TOKEN_JAR()), address(tokenJar));
     assertEq(releaser.RESOURCE_RECIPIENT(), address(0xdead));
     assertEq(address(releaser.RESOURCE()), address(0x1f9840a85d5aF5bf1D1762F925BDADdC4201F984));
