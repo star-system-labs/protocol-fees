@@ -105,8 +105,8 @@ contract V3FeeAdapter is IV3FeeAdapter, Owned {
     uint8 feeProtocol1 = defaultFeeValue >> 4;
     // Validate both values match pool requirements: must be 0 or in range [4, 10]
     require(
-      (feeProtocol0 == 0 || (feeProtocol0 >= 4 && feeProtocol0 <= 10)) &&
-      (feeProtocol1 == 0 || (feeProtocol1 >= 4 && feeProtocol1 <= 10)),
+      (feeProtocol0 == 0 || (feeProtocol0 >= 4 && feeProtocol0 <= 10))
+        && (feeProtocol1 == 0 || (feeProtocol1 >= 4 && feeProtocol1 <= 10)),
       InvalidFeeValue()
     );
     defaultFees[feeTier] = defaultFeeValue;
