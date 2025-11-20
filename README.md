@@ -243,9 +243,6 @@ Audit reports available in [audit/](./audit/)
   - OpenZeppelin
   - Spearbit
 
-**Notes**:
-- **UNIVesting**: In order to claim tokens, they must be both vested _and_ approved from the owner to UNIVesting. When `updateVestingAmount()` changes the quarterly amount, any existing approved tokens not divisible by the new quarterly vesting amount are temporarily unclaimable without manual intervention. Owners should consider updating approvals to a multiple of quarterly vesting amount when updating vesting amounts.
-
 ## Future Development
 
 ### Protocol Fee Auctions
