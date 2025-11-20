@@ -84,12 +84,11 @@ contract V3FeeAdapter is IV3FeeAdapter, Owned {
     amountsCollected = new Collected[](collectParams.length);
     for (uint256 i = 0; i < collectParams.length; i++) {
       CollectParams calldata params = collectParams[i];
-      (uint256 amount0Collected, uint256 amount1Collected) = IUniswapV3PoolOwnerActions(params.pool)
+      (uint128 amount0Collected, uint128 amount1Collected) = IUniswapV3PoolOwnerActions(params.pool)
         .collectProtocol(TOKEN_JAR, params.amount0Requested, params.amount1Requested);
 
-      amountsCollected[i] = Collected({
-        amount0Collected: uint128(amount0Collected), amount1Collected: uint128(amount1Collected)
-      });
+      amountsCollected[i] =
+        Collected({amount0Collected: amount0Collected, amount1Collected: amount1Collected});
     }
   }
 
