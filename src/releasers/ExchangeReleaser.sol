@@ -10,7 +10,7 @@ import {ITokenJar} from "../interfaces/ITokenJar.sol";
 import {IReleaser} from "../interfaces/IReleaser.sol";
 
 /// @title ExchangeReleaser
-/// @notice A contract that releases assets from an TokenJar in exchange for transferring a
+/// @notice A contract that releases assets from the TokenJar in exchange for transferring a
 /// threshold amount of a resource token
 /// @dev Inherits from ResourceManager for resource transferring functionality and Nonce for replay
 /// protection
