@@ -196,10 +196,11 @@ contract UnichainProtocolFeesForkTest is Test {
     currencies[0] = Currency.wrap(address(0));
 
     vm.startPrank(caller);
-    IERC20(RESOURCE).approve(address(releaser), THRESHOLD - 1);
+    // max approve, but still revert on insufficient balance
+    IERC20(RESOURCE).approve(address(releaser), type(uint256).max);
 
     // Should revert due to insufficient UNI
-    vm.expectRevert();
+    vm.expectRevert(RESOURCE);
     releaser.release(_nonce, currencies, caller);
     vm.stopPrank();
   }
