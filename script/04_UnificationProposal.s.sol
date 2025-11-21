@@ -2,12 +2,13 @@
 pragma solidity ^0.8.20;
 
 import "forge-std/Script.sol";
+import "forge-std/StdAssertions.sol";
 import {MainnetDeployer} from "./deployers/MainnetDeployer.sol";
 import {IUniswapV2Factory} from "briefcase/protocols/v2-core/interfaces/IUniswapV2Factory.sol";
 import {IUniswapV3Factory} from "briefcase/protocols/v3-core/interfaces/IUniswapV3Factory.sol";
 import {IERC20} from "forge-std/interfaces/IERC20.sol";
 
-contract UnificationProposal is Script {
+contract UnificationProposal is Script, StdAssertions {
   // TODO: Fill in these values
   address public constant AGREEMENT_ANCHOR_1 = address(0);
   bytes32 public constant CONTENT_HASH_1 = bytes32(0);
@@ -41,6 +42,7 @@ contract UnificationProposal is Script {
     ) = _run(deployer);
     console.log("Calldata details:");
     for (uint256 i = 0; i < calldatas.length; i++) {
+      assertTrue(targets[i] != address(0));
       console.log("Target", i);
       console.log(targets[i]);
       console.log("Value", i);
@@ -62,7 +64,6 @@ contract UnificationProposal is Script {
     console.logBytes(proposalCalldata);
 
     GOVERNOR_BRAVO.propose(targets, values, signatures, calldatas, PROPOSAL_DESCRIPTION);
-
     vm.stopBroadcast();
   }
 
@@ -136,6 +137,7 @@ contract UnificationProposal is Script {
 
     // DAO attests to Agreement 1
     if (AGREEMENT_ANCHOR_1 != address(0)) {
+      assertEq(CONTENT_HASH_1, IAgreementAnchor(AGREEMENT_ANCHOR_1).CONTENT_HASH());
       targets[5] = address(EAS);
       values[5] = 0;
       signatures[5] = "";
@@ -157,6 +159,7 @@ contract UnificationProposal is Script {
 
     // DAO attests to Agreement 2
     if (AGREEMENT_ANCHOR_2 != address(0)) {
+      assertEq(CONTENT_HASH_2, IAgreementAnchor(AGREEMENT_ANCHOR_2).CONTENT_HASH());
       targets[6] = address(EAS);
       values[6] = 0;
       signatures[6] = "";
@@ -213,4 +216,8 @@ interface IGovernorBravo {
     bytes[] memory calldatas,
     string memory description
   ) external returns (uint256);
+}
+
+interface IAgreementAnchor {
+  function CONTENT_HASH() external returns (bytes32);
 }
