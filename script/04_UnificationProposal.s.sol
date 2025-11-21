@@ -129,7 +129,8 @@ contract UnificationProposal is Script, StdAssertions {
     calldatas[3] = abi.encodeCall(V2_FACTORY.setFeeTo, (address(deployer.TOKEN_JAR())));
 
     // Approve two years of vesting to the UNIvester smart contract
-    // UNI stays in treasury until vested and unvested UNI can be cancelled by setting approve back to 0
+    // UNI stays in treasury until vested and unvested UNI can be cancelled by setting approve back
+    // to 0
     targets[4] = address(UNI);
     values[4] = 0;
     signatures[4] = "";

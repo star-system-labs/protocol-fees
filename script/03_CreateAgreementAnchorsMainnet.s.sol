@@ -13,7 +13,7 @@ contract CreateAgreementAnchors is Script {
   bytes32 public constant AGREEMENT_ANCHOR_2_CONTENT_HASH = "";
   address public constant AGREEMENT_ANCHOR_2_COUNTER_SIGNER = address(0);
 
-  function run() public {
+  function run() public returns (address, address) {
     require(block.chainid == 1, "Not mainnet");
     vm.startBroadcast();
     address agreementAnchor1 = AGREEMENT_ANCHOR_FACTORY.createAgreementAnchor(
@@ -26,6 +26,7 @@ contract CreateAgreementAnchors is Script {
     console2.log("Agreement Anchor 1:", agreementAnchor1);
     console2.log("Agreement Anchor 2:", agreementAnchor2);
     vm.stopBroadcast();
+    return (agreementAnchor1, agreementAnchor2);
   }
 }
 
