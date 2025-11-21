@@ -5,7 +5,7 @@ import "forge-std/Test.sol";
 import {
   CreateAgreementAnchors,
   IAgreementAnchorFactory
-} from "script/02B_CreateAgreementAnchorsMainnet.s.sol";
+} from "script/03_CreateAgreementAnchorsMainnet.s.sol";
 
 contract CreateAgreementAnchorsMainnetForkTest is Test {
   CreateAgreementAnchors public script;

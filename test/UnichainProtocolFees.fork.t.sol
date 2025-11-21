@@ -19,7 +19,7 @@ contract UnichainProtocolFeesForkTest is Test {
 
   address public constant RESOURCE = 0x8f187aA05619a017077f5308904739877ce9eA21; // Native Bridge
   // UNI
-  uint256 public constant THRESHOLD = 10_000e18;
+  uint256 public constant THRESHOLD = 2000e18;
 
   // Expected owner address (UNI Timelock alias on Unichain)
   address public constant owner = 0x2BAD8182C09F50c8318d769245beA52C32Be46CD;
