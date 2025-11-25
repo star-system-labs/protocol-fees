@@ -47,7 +47,7 @@ contract MainnetDeployer {
 
   // Using the real merkle root from the generated merkle tree in ./merkle-generator
   bytes32 constant INITIAL_MERKLE_ROOT =
-    bytes32(0x7023498b119180d3a2b889629918fd5d25c673bab9d12a89d854fbe7e48e39ea);
+    bytes32(0xdbc884abb1e0cfedd01db2ea427d6b8df7be2e63edcc701475387a28edb9a23e);
 
   uint8 constant DEFAULT_FEE_100 = 4 << 4 | 4; // default fee for 0.01% tier
   uint8 constant DEFAULT_FEE_500 = 4 << 4 | 4; // default fee for 0.05% tier
