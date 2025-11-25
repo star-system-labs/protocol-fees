@@ -128,38 +128,35 @@ contract ProtocolFeesForkTest is Test {
     pairs[1] = IV3FeeAdapter.Pair({token0: DAI, token1: WETH});
 
     // Multi-proof elements from the generated proof
-    bytes32[] memory proof = new bytes32[](24);
+    bytes32[] memory proof = new bytes32[](21);
 
     proof[0] = hex"6459eeadd691ace40c26c99e3dc443cf667837f2c70583f6a9814f53f9045c10";
-    proof[1] = hex"91011cd8c0dc32e229d7c45e1979b540b65c756e0c6c798c5439d628f99bb2f6";
+    proof[1] = hex"72a5540451eb138c2bc018fd4d9387a60ffcc2b1c0c4c3e8c9e91e08d5f8be7d";
     proof[2] = hex"8f87bbfccd457f48222f5bf48efe4d7f72b0bff94b0bc627fcd0dc2f57b87f4f";
-    proof[3] = hex"447cc84c0e45c2e3c0400b056291734e64c2c3ac1db56a9dd19baa9cbda838b7";
+    proof[3] = hex"56fb05c35b6eef4eae8664c5a1ce16188cf91e531b6a6f6251d3ba9aaab7a8f3";
     proof[4] = hex"8be4614e8239bb83fc200b0c6c0e3089e065b976b516d3f5692a5a3ee6bf7cbc";
-    proof[5] = hex"86a5a98a6fbea0081418123cb6e67aea7082f65a5fcb28afdfb04263435da5ac";
+    proof[5] = hex"95ae26f69fcf3f5b567289cfc764f0ff614e1121645b8f9685088de0f5565405";
     proof[6] = hex"47f6f335bb88b0779472babfdf5fa35e5db52c24a41e16a4972c5a06edda8c50";
-    proof[7] = hex"9809a83afce69b58291d3bc6c135949366a63b02f0c770765a069eec91a9d3b3";
+    proof[7] = hex"fea44e96bb9d2b7813a1efd6bd41b03af4aa6b5a24f53b2d38506f1edb7b9b77";
     proof[8] = hex"3c1c8b8f06e0094ae4d9d579136eb3967570d448102c0853db7d6c10593ea349";
-    proof[9] = hex"a3414ae7c6a2cf345f721e5696b8921289ee44f4d02b659d240968694b059a74";
+    proof[9] = hex"cf19215466076d2c3b47813f49b03fa62dbc7e0c207ff6222daecc1e851dee3e";
     proof[10] = hex"e5e804bdb9b8b146bb5e80c6d7c3cf6e0a4775236b4e750e1c8ee9b72c07d370";
-    proof[11] = hex"a35b13f6f6faec4238e9d543110a7186ecd6b3e8022f68ef8fbef378d02e2c85";
+    proof[11] = hex"47d34b0552c7dd70656f33a82e6d41786f8285c56cf1277f989d9e5979ef6dd5";
     proof[12] = hex"02f9819011687dd6423f96c6746ddbe355d04902dbe89dd7076f900c8c2ed0c9";
-    proof[13] = hex"bf4652c72c0680896755c60fa7a9907673de67f77a25d703341aee0eecdc6120";
+    proof[13] = hex"73d8cb1800d3d1cb3f9acb880727840e50181c206756500fe1a3678592728b11";
     proof[14] = hex"ad9637d1f10c84147eb2c874a39aa57bbfabe6624d192e11f76e5a2f448d31b4";
-    proof[15] = hex"4547a629c2112d1ec90fc83b09537bb54fb845b30d8a537930a6482f4483ce6d";
+    proof[15] = hex"a1010d2b2144559d8af9be4dc23a2438fd63764b459f17c91e1c73abdbc9422c";
     proof[16] = hex"4f78b2165924f01484a707c12576ba278ced969016532ed493079b15e39695d7";
-    proof[17] = hex"7e2a6fc6c6923c44f216c0a4a5fe2f4d2f146e703bcf74c609a2728713d634c4";
-    proof[18] = hex"caa722e355c99a690e0c9b5e8fd2df0b2dd9a17a0c6591bc19b7a378881515d7";
-    proof[19] = hex"1cbc789fd32b4731d5825e844591f9356e39f8500bd974eaa51fb5bf52023501";
-    proof[20] = hex"80d4fbe20df7a885477651cbb27cc5c86eadf56a9bf7dace2366717fc63ff378";
-    proof[21] = hex"e869068f169e4a6087b82a2dbb17fd2e948cf45dc0b099b16307ba202857e05f";
-    proof[22] = hex"b896c0845073c96cc05b282fd5e54b2143905e83dbf1fcde9667ee6c991a0e46";
-    proof[23] = hex"6fa5f2ab65445299069985e6455cd42f9053768de3af5c7fb580542fd357557b";
+    proof[17] = hex"80b0f46608bb87e8ade934f3234628534d7b925179b7d3a26b6893db9bda41d7";
+    proof[18] = hex"80d4fbe20df7a885477651cbb27cc5c86eadf56a9bf7dace2366717fc63ff378";
+    proof[19] = hex"b896c0845073c96cc05b282fd5e54b2143905e83dbf1fcde9667ee6c991a0e46";
+    proof[20] = hex"41505af6416c28e0e97852b057364d7f7cbd4348da2b37ff7cb67d892d285cc5";
 
     // Proof flags from the generated proof
-    bool[] memory proofFlags = new bool[](25);
-    // All false except index 24
-    for (uint256 i = 0; i < 25; i++) {
-      proofFlags[i] = (i == 24);
+    bool[] memory proofFlags = new bool[](22);
+    // All false except index 18
+    for (uint256 i = 0; i < 22; i++) {
+      proofFlags[i] = (i == 18);
     }
 
     // Enable fees on the pools
@@ -274,7 +271,7 @@ contract ProtocolFeesForkTest is Test {
 
   function test_releaseV3(address caller, address recipient) public {
     vm.assume(caller != address(0));
-    vm.assume(recipient != address(0) && recipient != address(tokenJar));
+    vm.assume(recipient != address(0) && recipient != address(tokenJar) && recipient != USDC);
     test_collectFeeV3();
 
     // give the caller some UNI to burn
@@ -307,7 +304,7 @@ contract ProtocolFeesForkTest is Test {
 
   function test_releaseV2V3(address caller, address recipient) public {
     vm.assume(caller != address(0));
-    vm.assume(recipient != address(0) && recipient != address(tokenJar));
+    vm.assume(recipient != address(0) && recipient != address(tokenJar) && recipient != USDC);
     test_createV2Fees();
     test_collectFeeV3();
 

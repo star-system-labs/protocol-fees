@@ -173,9 +173,9 @@ Ethereum Mainnet
 
 | Contract | Address |
 |----------|---------|
-| UnichainDeployer | `0x...` |
-| TokenJar | `0x...` |
-| Releaser | `0x...` |
+| UnichainDeployer | [`0x446Dd2FCe8310963c0c479fCAde6E37767E307Fe`](https://uniscan.xyz/address/0x446Dd2FCe8310963c0c479fCAde6E37767E307Fe) |
+| TokenJar | [`0x280548Ba09771e50a78a9caC007E4b67D6331a11`](https://uniscan.xyz/address/0x280548Ba09771e50a78a9caC007E4b67D6331a11) |
+| Releaser | [`0x9F1cFC8184824aDe8b0C2A3A454E6298c91BB639`](https://uniscan.xyz/address/0x9F1cFC8184824aDe8b0C2A3A454E6298c91BB639) |
 
 ## Development
 
