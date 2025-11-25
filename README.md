@@ -157,6 +157,26 @@ Ethereum Mainnet
 
 > Crosschain system coming at a later date
 
+### Deployed Addresses
+
+#### Ethereum Mainnet (Chain ID: 1)
+
+| Contract | Address |
+|----------|---------|
+| MainnetDeployer | [`0xA4DB82622eb3Ed538766CAA1c1F232be8c4969Cc`](https://etherscan.io/address/0xA4DB82622eb3Ed538766CAA1c1F232be8c4969Cc) |
+| TokenJar | [`0xc06521c1925079c9Df738e64e84086558887f539`](https://etherscan.io/address/0xc06521c1925079c9Df738e64e84086558887f539) |
+| Releaser (Firepit) | [`0x62fF5241362519277586664340F4FAC6782F1832`](https://etherscan.io/address/0x62fF5241362519277586664340F4FAC6782F1832) |
+| V3FeeAdapter | [`0x59fDBc19ceD63494D2144E31caF15a725677Ffd5`](https://etherscan.io/address/0x59fDBc19ceD63494D2144E31caF15a725677Ffd5) |
+| UNI Vesting | [`0x72Db333908bf5D123ab1889ADde646e017104456`](https://etherscan.io/address/0x72Db333908bf5D123ab1889ADde646e017104456) |
+
+#### Unichain (Chain ID: 130)
+
+| Contract | Address |
+|----------|---------|
+| UnichainDeployer | `0x...` |
+| TokenJar | `0x...` |
+| Releaser | `0x...` |
+
 ## Development
 
 ### Prerequisites
