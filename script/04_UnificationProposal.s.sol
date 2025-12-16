@@ -20,13 +20,12 @@ struct ProposalAction {
 }
 
 contract UnificationProposal is Script, StdAssertions {
-  // TODO: Fill in these values
   AgreementAnchor public constant AGREEMENT_ANCHOR_1 =
-    AgreementAnchor(0x0000000000000000000000000000000000000000);
+    AgreementAnchor(0xC707467e7fb43Fe7Cc55264F892Dd2D7f8Fc27C8);
   AgreementAnchor public constant AGREEMENT_ANCHOR_2 =
-    AgreementAnchor(0x0000000000000000000000000000000000000000);
+    AgreementAnchor(0x01159Fa9970d865914C8Ad8080FcCc5cDbadeFEB);
   AgreementAnchor public constant AGREEMENT_ANCHOR_3 =
-    AgreementAnchor(0x0000000000000000000000000000000000000000);
+    AgreementAnchor(0x6089Da244854CcFC83265Eb30739767B383380CE);
   string public constant PROPOSAL_DESCRIPTION = "";
 
   IGovernorBravo internal constant GOVERNOR_BRAVO =

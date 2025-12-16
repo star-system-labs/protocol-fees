@@ -223,6 +223,9 @@ Ethereum Mainnet
 | Releaser (Firepit) | [`0x0D5Cd355e2aBEB8fb1552F56c965B867346d6721`](https://etherscan.io/address/0x0D5Cd355e2aBEB8fb1552F56c965B867346d6721) |
 | V3FeeAdapter | [`0x5E74C9f42EEd283bFf3744fBD1889d398d40867d`](https://etherscan.io/address/0x5E74C9f42EEd283bFf3744fBD1889d398d40867d) |
 | UNI Vesting | [`0xCa046A83EDB78F74aE338bb5A291bF6FdAc9e1D2`](https://etherscan.io/address/0xCa046A83EDB78F74aE338bb5A291bF6FdAc9e1D2) |
+| Agreement Anchor 1 | [`0xC707467e7fb43Fe7Cc55264F892Dd2D7f8Fc27C8`](https://etherscan.io/address/0xC707467e7fb43Fe7Cc55264F892Dd2D7f8Fc27C8) |
+| Agreement Anchor 2 | [`0x01159Fa9970d865914C8Ad8080FcCc5cDbadeFEB`](https://etherscan.io/address/0x01159Fa9970d865914C8Ad8080FcCc5cDbadeFEB) |
+| Agreement Anchor 3 | [`0x6089Da244854CcFC83265Eb30739767B383380CE`](https://etherscan.io/address/0x6089Da244854CcFC83265Eb30739767B383380CE) |
 
 ### Unichain (Chain ID: 130)
 
