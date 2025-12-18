@@ -218,11 +218,14 @@ Ethereum Mainnet
 
 | Contract | Address |
 |----------|---------|
-| MainnetDeployer | [`0xd0457dfABEf856bCb5eCaF3681E78F94b0639e8c`](https://etherscan.io/address/0xd0457dfABEf856bCb5eCaF3681E78F94b0639e8c) |
-| TokenJar | [`0x13d1687CA0FD1a5Ac3fDFB1269b6dbD2E25F7777`](https://etherscan.io/address/0x13d1687CA0FD1a5Ac3fDFB1269b6dbD2E25F7777) |
-| Releaser (Firepit) | [`0x6531E445D742a5d8cA28aE3CBD344042fE604AfF`](https://etherscan.io/address/0x6531E445D742a5d8cA28aE3CBD344042fE604AfF) |
-| V3FeeAdapter | [`0x927b985a90AbE651D74Bbe76DC4071092A28b4A2`](https://etherscan.io/address/0x927b985a90AbE651D74Bbe76DC4071092A28b4A2) |
-| UNI Vesting | [`0xF32d53AE98c4D6aB04d4b870fF9a97f37a724F79`](https://etherscan.io/address/0xF32d53AE98c4D6aB04d4b870fF9a97f37a724F79) |
+| MainnetDeployer | [`0xd3Aa12B99892b7D95BBAA27AEf222A8E2a038C0C`](https://etherscan.io/address/0xd3Aa12B99892b7D95BBAA27AEf222A8E2a038C0C) |
+| TokenJar | [`0xf38521f130fcCF29dB1961597bc5d2B60F995f85`](https://etherscan.io/address/0xf38521f130fcCF29dB1961597bc5d2B60F995f85) |
+| Releaser (Firepit) | [`0x0D5Cd355e2aBEB8fb1552F56c965B867346d6721`](https://etherscan.io/address/0x0D5Cd355e2aBEB8fb1552F56c965B867346d6721) |
+| V3FeeAdapter | [`0x5E74C9f42EEd283bFf3744fBD1889d398d40867d`](https://etherscan.io/address/0x5E74C9f42EEd283bFf3744fBD1889d398d40867d) |
+| UNI Vesting | [`0xCa046A83EDB78F74aE338bb5A291bF6FdAc9e1D2`](https://etherscan.io/address/0xCa046A83EDB78F74aE338bb5A291bF6FdAc9e1D2) |
+| Agreement Anchor 1 | [`0xC707467e7fb43Fe7Cc55264F892Dd2D7f8Fc27C8`](https://etherscan.io/address/0xC707467e7fb43Fe7Cc55264F892Dd2D7f8Fc27C8) |
+| Agreement Anchor 2 | [`0x33A56942Fe57f3697FE0fF52aB16cb0ba9b8eadd`](https://etherscan.io/address/0x33A56942Fe57f3697FE0fF52aB16cb0ba9b8eadd) |
+| Agreement Anchor 3 | [`0xF9F85a17cC6De9150Cd139f64b127976a1dE91D1`](https://etherscan.io/address/0xF9F85a17cC6De9150Cd139f64b127976a1dE91D1) |
 
 ### Unichain (Chain ID: 130)
 
